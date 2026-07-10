@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "zesume",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-07-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "AI_PROVIDER": "mock",
+    "DEEPSEEK_MODEL": "deepseek-v4-flash",
+    "DATABASE_URL": "postgresql://user:password@localhost:5432/zesume?schema=public"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

@@ -30,18 +30,25 @@ npm run dev -- --hostname 127.0.0.1 --port 3001
 
 Copy `.env.example` to `.env.local` and configure the AI provider you want to use.
 
-## Cloudflare
+## Cloudflare Workers
 
 Cloudflare credentials should stay local and must not be committed. Use the
 `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` placeholders in
 `.env.example` when setting up local deployment tooling.
 
-Cloudflare Pages can connect to the GitHub repository for automatic deployments,
-but Zesume currently uses Next.js API routes for resume extraction, rewriting,
-and DOCX export. Cloudflare's current Pages guide points full-stack Next.js apps
-to the Workers/OpenNext path, while Pages is recommended for static Next.js
-sites. Do not switch this app to static export unless those backend routes are
-replaced by another runtime.
+Zesume deploys as a full-stack Next.js app on Cloudflare Workers using
+OpenNext. The app uses route handlers for resume extraction, rewriting, and
+DOCX export, so Workers/OpenNext is preferred over static Cloudflare Pages.
+
+Useful commands:
+
+```bash
+npm run preview
+npm run deploy
+```
+
+Cloudflare runtime secrets such as `DEEPSEEK_API_KEY` should be configured in
+Cloudflare, not committed to GitHub.
 
 ## Memory Architecture
 

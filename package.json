@@ -5,12 +5,16 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "start": "next start",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.1",
     "@prisma/client": "^7.8.0",
     "docx": "^9.7.1",
     "lucide-react": "^0.468.0",
@@ -24,6 +28,7 @@
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "prisma": "^7.8.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "wrangler": "^4.110.0"
   }
 }
