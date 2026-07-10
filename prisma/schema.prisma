@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile           UserProfile?
+  preferences       UserPreference?
+  experiences       Experience[]
+  resumeGenerations ResumeGeneration[]
+
+  @@map("users")
+}
+
+model UserProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  fullName           String?
+  educationSummary   String?
+  careerStage        String?
+  targetRoles        String[]
+  industries         String[]
+  locationPreference String?
+  notes              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model Experience {
+  id     String @id @default(cuid())
+  userId String
+
+  title        String
+  organization String?
+  category     String
+  description  String?
+  startDate    DateTime?
+  endDate      DateTime?
+  isCurrent    Boolean  @default(false)
+  tags         String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bullets ExperienceBullet[]
+
+  @@index([userId])
+  @@index([category])
+  @@map("experiences")
+}
+
+model ExperienceBullet {
+  id           String @id @default(cuid())
+  experienceId String
+
+  content    String
+  source     String?
+  tags       String[]
+  confidence Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  experience Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  @@index([experienceId])
+  @@map("experience_bullets")
+}
+
+model UserPreference {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  preferredTone        String?
+  preferredBulletStyle String?
+  avoidPhrases         String[]
+  defaultTemplate      String?
+  defaultUseMemory     Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model ResumeGeneration {
+  id     String @id @default(cuid())
+  userId String
+
+  targetTemplate String
+  tone           String
+
+  inputResumeText String?
+  rewrittenResume String?
+  suggestions     String[]
+  qualityWarnings String[]
+
+  usedMemory     Boolean @default(false)
+  memorySnapshot Json?
+
+  title   String?
+  isSaved Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("resume_generations")
+}
