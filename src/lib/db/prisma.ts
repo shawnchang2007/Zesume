@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@/generated/prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { cache } from "react";
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
@@ -8,7 +9,7 @@ function createPrismaClient() {
     throw new Error("DATABASE_URL is required when the database runtime is enabled.");
   }
 
-  const adapter = new PrismaPg({ connectionString });
+  const adapter = new PrismaPg({ connectionString, maxUses: 1 });
 
   return new PrismaClient({
     adapter,
@@ -16,9 +17,7 @@ function createPrismaClient() {
   });
 }
 
-export function getPrismaClient() {
-  return createPrismaClient();
-}
+export const getPrismaClient = cache(createPrismaClient);
 
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, property, receiver) {

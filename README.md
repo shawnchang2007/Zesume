@@ -28,7 +28,10 @@ AI resume rewriting for Gen Z applicants.
 Not included in v1.1: PDF upload, PDF export, original formatting restoration,
 online resume editing, or complex resume layout.
 
-Uploaded templates are processed in memory and are not saved to the server.
+Uploaded template files are processed in memory and are not saved to the server.
+For authorized users, the sanitized template specification is saved under a
+server-owned `customTemplateId`; rewrite requests never trust client-supplied
+template rules.
 Template examples are treated as untrusted reference data: names, companies,
 schools, dates, metrics, and other example facts are excluded from the reusable
 template specification.
@@ -72,7 +75,7 @@ The uploaded-template flow uses:
 
 - `POST /api/resume/template/analyze` with multipart form data
 - `POST /api/resume/rewrite` with `templateId: "uploaded-template"` and the
-  validated `uploadedTemplateSpec`
+  server-issued `customTemplateId`
 
 Useful commands:
 
@@ -84,9 +87,8 @@ npm run deploy
 Cloudflare runtime secrets such as `DEEPSEEK_API_KEY` should be configured in
 Cloudflare, not committed to GitHub.
 
-Production resume rewrites use a 45-second provider timeout and a Cloudflare
-rate-limiting binding. Until user authentication is available, the rewrite
-limit is 10 requests per minute per anonymous network source. Workers
+Production resume rewrites use a 45-second provider timeout, plan-based usage
+tracking, and a Cloudflare rate-limiting binding. Workers
 observability records invocation status and sanitized error codes only; resume
 text and uploaded file contents must never be written to logs.
 
@@ -95,10 +97,11 @@ text and uploaded file contents must never be written to logs.
 Phase 1 adds the database and service foundation for future user memory:
 
 - PostgreSQL + Prisma schema
-- `users`, `user_profiles`, `experiences`, `experience_bullets`, `user_preferences`, and `resume_generations`
+- profiles, Career Items, preferences, generations, subscriptions, entitlements,
+  and usage events
 - profile memory service
 - generation history service
-- rule-based experience retrieval service
+- rule-based Career Item retrieval service
 - optional `useMemory` support in the rewrite API
 
 The current pasted or uploaded resume remains the primary source. Memory is only supporting context and should not be used to invent facts.
@@ -106,11 +109,8 @@ The current pasted or uploaded resume remains the primary source. Memory is only
 Google login is available, but anonymous rewriting remains supported. When
 `useMemory` is true but there is no authenticated user, the rewrite API falls
 back to the existing no-memory flow.
-Before enabling real profile/history reads in production, connect an auth
-provider and configure a real PostgreSQL `DATABASE_URL`.
-This project currently uses Prisma 7, so the first production database hookup
-should also add the appropriate PostgreSQL driver adapter before real queries are
-enabled.
+Production uses Auth.js database sessions, Prisma Postgres, and
+`@prisma/adapter-pg` through OpenNext's official Prisma packaging flow.
 
 ## v2 Access Foundation
 
@@ -130,13 +130,21 @@ The generated PostgreSQL migration is stored in
 existing database without reviewing whether that database already contains the
 legacy Phase 1 memory tables.
 
-Production currently keeps database-backed profile and history features in a
-safe disabled state while `DATABASE_URL` is a placeholder. Connect a real
-PostgreSQL database and apply the migration before enabling persistence. Google
-login and the resume tools continue to work during this transition.
+`DATABASE_RUNTIME_ENABLED` controls business persistence and
+`AUTH_DATABASE_ENABLED` independently controls the Auth.js Prisma Adapter. Both
+are enabled in production. Prisma uses the standard generated client because
+OpenNext must patch it for the Workers runtime.
 
-`DATABASE_RUNTIME_ENABLED=false` keeps Prisma out of local or transitional
-Cloudflare builds while persistence is unavailable. The production deploy
-script builds with the database runtime enabled and uses Prisma 7's Cloudflare
-runtime with `@prisma/adapter-pg`. Apply the migration before deploying that
-mode so Auth.js never points at an empty schema.
+Useful verification commands:
+
+```bash
+npm test
+npm run typecheck
+npm run build:worker
+TEST_DATABASE_URL=postgresql://.../zesume_test npm run test:db
+PRODUCTION_BASE_URL=https://zesume.xyz npm run test:smoke
+```
+
+The database integration script refuses to run unless the database name contains
+`test` and its public schema is empty. It runs both migrations and CRUD checks in
+a transaction that is rolled back.

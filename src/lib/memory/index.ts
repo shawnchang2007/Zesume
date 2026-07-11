@@ -1,3 +1,4 @@
+export * from "./career-items";
 export * from "./experiences";
 export * from "./generations";
 export * from "./preferences";

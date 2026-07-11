@@ -24,6 +24,7 @@ type ResumeTemplateSelectorProps = {
   onAnalysisStart: () => void;
   onAnalysisSuccess: (
     templateSpec: ResumeTemplateSpec,
+    customTemplateId: string,
     fileName: string,
     file: File,
   ) => void;
@@ -36,6 +37,7 @@ type AnalyzeTemplateResponse =
       success: true;
       data: {
         templateSpec: ResumeTemplateSpec;
+        customTemplateId: string;
         fileName: string;
         provider: string;
         model: string;
@@ -96,7 +98,12 @@ export function ResumeTemplateSelector({
         return;
       }
 
-      onAnalysisSuccess(result.data.templateSpec, result.data.fileName, file);
+      onAnalysisSuccess(
+        result.data.templateSpec,
+        result.data.customTemplateId,
+        result.data.fileName,
+        file,
+      );
     } catch {
       onAnalysisError("Could not analyze this template. Please try again.");
     } finally {

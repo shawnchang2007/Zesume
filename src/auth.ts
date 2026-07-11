@@ -2,14 +2,16 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import {
-  getPrismaClient,
   isDatabaseConfigured,
+  prisma,
 } from "@/lib/db/prisma";
 
 const databaseEnabled = isDatabaseConfigured();
-const authAdapter = databaseEnabled
+const authDatabaseEnabled =
+  databaseEnabled && process.env.AUTH_DATABASE_ENABLED === "true";
+const authAdapter = authDatabaseEnabled
   ? PrismaAdapter(
-      getPrismaClient() as unknown as Parameters<typeof PrismaAdapter>[0],
+      prisma as unknown as Parameters<typeof PrismaAdapter>[0],
     )
   : undefined;
 
@@ -20,12 +22,14 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     signIn: "/sign-in",
   },
   session: {
-    strategy: databaseEnabled ? "database" : "jwt",
+    strategy: authDatabaseEnabled ? "database" : "jwt",
   },
   callbacks: {
-    session({ session, user }) {
-      if (session.user && user?.id) {
-        session.user.id = user.id;
+    session({ session, user, token }) {
+      const userId = user?.id ?? token?.sub;
+
+      if (session.user && userId) {
+        session.user.id = userId;
       }
 
       return session;

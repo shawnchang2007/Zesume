@@ -1,5 +1,5 @@
 import type { TargetTemplate } from "@/lib/ai/types";
-import { getUserExperiences } from "./experiences";
+import { getUserCareerItems } from "./career-items";
 import { getUserPreferences } from "./preferences";
 import { getUserProfile } from "./profile";
 import type { MemoryRetrievalInput, RelevantExperienceMemory } from "./types";
@@ -58,7 +58,7 @@ const templateKeywords: Record<TargetTemplate, string[]> = {
 };
 
 function scoreExperience(
-  experience: Awaited<ReturnType<typeof getUserExperiences>>[number],
+  experience: Awaited<ReturnType<typeof getUserCareerItems>>[number],
   resumeText: string,
   targetTemplate: TargetTemplate,
 ) {
@@ -66,9 +66,11 @@ function scoreExperience(
     resumeText,
     experience.title,
     experience.organization,
-    experience.category,
-    experience.description,
-    experience.tags.join(" "),
+    experience.type,
+    experience.summary,
+    experience.rawContent,
+    experience.tags.map(({ tag }) => tag.name).join(" "),
+    experience.skills.map(({ skill }) => skill.name).join(" "),
     experience.bullets.map((bullet) => bullet.content).join(" "),
   ]
     .filter(Boolean)
@@ -86,13 +88,13 @@ export async function getMemoryForRewrite({
   resumeText,
   targetTemplate,
 }: MemoryRetrievalInput) {
-  const [profile, preferences, experiences] = await Promise.all([
+  const [profile, preferences, careerItems] = await Promise.all([
     getUserProfile(userId),
     getUserPreferences(userId),
-    getUserExperiences(userId),
+    getUserCareerItems(userId),
   ]);
 
-  const relevantExperiences: RelevantExperienceMemory[] = experiences
+  const relevantExperiences: RelevantExperienceMemory[] = careerItems
     .map((experience) => ({
       experience,
       score: scoreExperience(experience, resumeText, targetTemplate),
@@ -104,12 +106,15 @@ export async function getMemoryForRewrite({
       id: experience.id,
       title: experience.title,
       organization: experience.organization,
-      category: experience.category,
-      description: experience.description,
-      tags: experience.tags,
+      category: experience.type,
+      description: experience.summary ?? experience.rawContent,
+      tags: [
+        ...experience.tags.map(({ tag }) => tag.name),
+        ...experience.skills.map(({ skill }) => skill.name),
+      ],
       bullets: experience.bullets.map((bullet) => ({
         content: bullet.content,
-        tags: bullet.tags,
+        tags: [],
       })),
     }));
 

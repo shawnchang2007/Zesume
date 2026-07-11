@@ -9,15 +9,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function stringValue(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
+  return typeof value === "string" ? value.trim().slice(0, 500) : "";
 }
 
-function stringList(value: unknown) {
+function stringList(value: unknown, maxItems = 30) {
   return Array.isArray(value)
     ? value
         .filter((item): item is string => typeof item === "string")
-        .map((item) => item.trim())
+        .map((item) => item.trim().slice(0, 1_000))
         .filter(Boolean)
+        .slice(0, maxItems)
     : [];
 }
 
@@ -29,7 +30,7 @@ function normalizeHeader(value: unknown): StructuredResumeHeader {
     location: stringValue(header.location),
     email: stringValue(header.email),
     phone: stringValue(header.phone),
-    links: stringList(header.links),
+    links: stringList(header.links, 10),
   };
 }
 
@@ -43,8 +44,8 @@ function normalizeItem(value: unknown): StructuredResumeItem | null {
     date: stringValue(value.date),
     location: stringValue(value.location),
     meta: stringValue(value.meta),
-    details: stringList(value.details),
-    bullets: stringList(value.bullets),
+    details: stringList(value.details, 20),
+    bullets: stringList(value.bullets, 20),
   };
 }
 
@@ -52,11 +53,12 @@ export function normalizeStructuredResume(value: unknown): StructuredResume | nu
   if (!isRecord(value) || !Array.isArray(value.sections)) return null;
 
   const sections = value.sections
+    .slice(0, 20)
     .filter(isRecord)
     .map((section) => ({
       title: stringValue(section.title),
       items: Array.isArray(section.items)
-        ? section.items.map(normalizeItem).filter((item): item is StructuredResumeItem => Boolean(item))
+        ? section.items.slice(0, 30).map(normalizeItem).filter((item): item is StructuredResumeItem => Boolean(item))
         : [],
     }))
     .filter((section) => section.title && section.items.length > 0);
@@ -69,9 +71,9 @@ export function normalizeStructuredResume(value: unknown): StructuredResume | nu
     header: normalizeHeader(value.header),
     sections,
     qualityNotes: {
-      majorChangesMade: stringList(notes.majorChangesMade),
-      missingInformation: stringList(notes.missingInformation),
-      warnings: stringList(notes.warnings),
+      majorChangesMade: stringList(notes.majorChangesMade, 20),
+      missingInformation: stringList(notes.missingInformation, 20),
+      warnings: stringList(notes.warnings, 20),
     },
   };
 }

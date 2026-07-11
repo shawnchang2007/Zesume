@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requestFitsDeclaredLimit } from "@/lib/http/body";
 import {
   extractTextFromResumeFile,
   getFileExtension,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/resume/file-extraction";
 
 const MIN_EXTRACTED_TEXT_LENGTH = 20;
+const MAX_MULTIPART_REQUEST_SIZE = 3 * 1024 * 1024;
 
 function errorResponse(code: string, message: string, status = 400) {
   return NextResponse.json(
@@ -24,6 +26,10 @@ function errorResponse(code: string, message: string, status = 400) {
 
 export async function POST(request: Request) {
   try {
+    if (!requestFitsDeclaredLimit(request, MAX_MULTIPART_REQUEST_SIZE)) {
+      return errorResponse("FILE_TOO_LARGE", "Upload request is too large.", 413);
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
 

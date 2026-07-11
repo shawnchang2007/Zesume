@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
+import { requestFitsDeclaredLimit } from "@/lib/http/body";
 import { analyzeTemplateWithDeepSeek } from "@/lib/ai/providers/deepseek";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { canUseFeature, getCurrentAccess } from "@/lib/billing";
+import { isDatabaseConfigured, prisma } from "@/lib/db/prisma";
+import { TEMPLATE_FAIR_USE_LIMITS } from "@/lib/billing/plan-config";
 import { checkResumeRewriteRateLimit } from "@/lib/platform/rate-limit";
 import {
   extractTextFromResumeFile,
@@ -12,6 +16,7 @@ import {
 
 const MIN_TEMPLATE_TEXT_LENGTH = 30;
 const MAX_TEMPLATE_TEXT_LENGTH = 20_000;
+const MAX_MULTIPART_REQUEST_SIZE = 3 * 1024 * 1024;
 
 function errorResponse(code: string, message: string, status = 400) {
   return NextResponse.json(
@@ -22,7 +27,57 @@ function errorResponse(code: string, message: string, status = 400) {
 
 export async function POST(request: Request) {
   try {
+    if (!requestFitsDeclaredLimit(request, MAX_MULTIPART_REQUEST_SIZE)) {
+      return errorResponse("FILE_TOO_LARGE", "Upload request is too large.", 413);
+    }
+
     const currentUser = await getCurrentUser(request);
+
+    if (!currentUser?.id) {
+      return errorResponse(
+        "UNAUTHORIZED",
+        "Please sign in before analyzing a custom template.",
+        401,
+      );
+    }
+
+    if (!isDatabaseConfigured()) {
+      return errorResponse(
+        "DATABASE_UNAVAILABLE",
+        "Custom template storage is not available.",
+        503,
+      );
+    }
+
+    const access = await getCurrentAccess(currentUser);
+
+    if (!access.databaseBacked) {
+      return errorResponse(
+        "DATABASE_UNAVAILABLE",
+        "Account access could not be verified. Please try again.",
+        503,
+      );
+    }
+
+    if (!canUseFeature(access, "CUSTOM_TEMPLATE")) {
+      return errorResponse(
+        "FEATURE_NOT_AVAILABLE",
+        "Custom template analysis requires Plus, Pro, or a Template Pass.",
+        403,
+      );
+    }
+
+    const activeTemplateCount = await prisma.customTemplate.count({
+      where: { userId: currentUser.id, status: { in: ["PROCESSING", "READY"] } },
+    });
+
+    if (activeTemplateCount >= TEMPLATE_FAIR_USE_LIMITS.maxActiveTemplates) {
+      return errorResponse(
+        "TEMPLATE_LIMIT_REACHED",
+        "Your active custom template limit has been reached.",
+        403,
+      );
+    }
     const withinRateLimit = await checkResumeRewriteRateLimit(
       request,
       currentUser?.email,
@@ -104,11 +159,26 @@ export async function POST(request: Request) {
       fileName: file.name,
     });
 
+    const customTemplate = await prisma.customTemplate.create({
+      data: {
+        userId: currentUser.id,
+        name: analysis.templateSpec.name,
+        originalFileName: file.name.slice(0, 255),
+        mimeType: file.type.slice(0, 120) || null,
+        parsedSchema: JSON.parse(JSON.stringify(analysis.templateSpec)),
+        previewText: templateText.slice(0, 5_000),
+        status: "READY",
+        reusable: true,
+      },
+      select: { id: true },
+    });
+
     return NextResponse.json({
       success: true,
       data: {
         ...analysis,
         fileName: file.name,
+        customTemplateId: customTemplate.id,
       },
     });
   } catch (error) {

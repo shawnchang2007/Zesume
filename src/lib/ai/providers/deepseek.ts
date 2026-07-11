@@ -8,6 +8,9 @@ import type {
   RewriteResumeOutput,
 } from "../types";
 import { parseUploadedTemplateSpec } from "@/lib/resume/templates";
+import { readJsonResponse } from "@/lib/http/body";
+
+const MAX_AI_RESPONSE_BYTES = 1024 * 1024;
 
 type DeepSeekResponse = {
   choices?: Array<{
@@ -68,7 +71,16 @@ export async function rewriteWithDeepSeek(
     throw new Error("AI_REQUEST_FAILED: DeepSeek request failed.");
   }
 
-  const data = (await response.json()) as DeepSeekResponse;
+  let data: DeepSeekResponse;
+
+  try {
+    data = await readJsonResponse<DeepSeekResponse>(
+      response,
+      MAX_AI_RESPONSE_BYTES,
+    );
+  } catch {
+    throw new Error("AI_REQUEST_FAILED: DeepSeek returned an invalid response.");
+  }
   const text = data.choices?.[0]?.message?.content;
 
   if (!text) {
@@ -133,7 +145,18 @@ export async function analyzeTemplateWithDeepSeek(
     throw new Error("AI_REQUEST_FAILED: DeepSeek template analysis failed.");
   }
 
-  const data = (await response.json()) as DeepSeekResponse;
+  let data: DeepSeekResponse;
+
+  try {
+    data = await readJsonResponse<DeepSeekResponse>(
+      response,
+      MAX_AI_RESPONSE_BYTES,
+    );
+  } catch {
+    throw new Error(
+      "AI_REQUEST_FAILED: DeepSeek returned an invalid template response.",
+    );
+  }
   const text = data.choices?.[0]?.message?.content;
 
   if (!text) {

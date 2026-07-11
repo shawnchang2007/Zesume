@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { rewriteResume } from "@/lib/ai";
 import type { CareerTarget, Tone } from "@/lib/ai/types";
+import {
+  canGenerate as canAccessGenerate,
+  canUseFeature,
+  getCurrentAccess,
+  recordSuccessfulGeneration,
+} from "@/lib/billing";
+import { isDatabaseConfigured, prisma } from "@/lib/db/prisma";
+import { BodyTooLargeError, readJsonRequest } from "@/lib/http/body";
 import { getMemoryForRewrite } from "@/lib/memory";
 import { checkResumeRewriteRateLimit } from "@/lib/platform/rate-limit";
 import {
@@ -16,6 +24,7 @@ import {
 
 const MIN_RESUME_LENGTH = 200;
 const MAX_RESUME_LENGTH = 5000;
+const MAX_REWRITE_REQUEST_BYTES = 64 * 1024;
 
 const targetTracks = new Set<CareerTarget>([
   "software_engineering",
@@ -46,15 +55,16 @@ function errorResponse(
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as {
+    const body = await readJsonRequest<{
       resumeText?: unknown;
       targetTrack?: unknown;
       targetTemplate?: unknown;
       templateId?: unknown;
-      uploadedTemplateSpec?: unknown;
+      customTemplateId?: unknown;
       tone?: unknown;
       useMemory?: unknown;
-    };
+      saveGeneration?: unknown;
+    }>(request, MAX_REWRITE_REQUEST_BYTES);
 
     if (typeof body.resumeText !== "string" || !body.resumeText.trim()) {
       return errorResponse("INVALID_INPUT", "Resume text is required.");
@@ -102,27 +112,21 @@ export async function POST(request: Request) {
       return errorResponse("INVALID_INPUT", "Please choose a valid resume template.");
     }
 
-    const uploadedTemplateSpec =
+    let templateSpec =
       templateIdValue === "uploaded-template"
-        ? parseUploadedTemplateSpec(body.uploadedTemplateSpec)
-        : undefined;
-    const templateSpec = getResumeTemplateSpec(
-      templateIdValue,
-      uploadedTemplateSpec ?? undefined,
-    );
+        ? null
+        : getResumeTemplateSpec(templateIdValue);
+    let customTemplateId: string | undefined;
 
-    if (!templateSpec) {
+    if (templateIdValue !== "uploaded-template" && !templateSpec) {
       return errorResponse(
-        templateIdValue === "uploaded-template"
-          ? "INVALID_UPLOADED_TEMPLATE"
-          : "INVALID_INPUT",
-        templateIdValue === "uploaded-template"
-          ? "Please analyze an uploaded template before generating your resume."
-          : "Please choose a valid resume template.",
+        "INVALID_INPUT",
+        "Please choose a valid resume template.",
       );
     }
 
     const useMemory = body.useMemory === true;
+    const saveGeneration = body.saveGeneration === true;
     const currentUser = await getCurrentUser(request);
     const withinRateLimit = await checkResumeRewriteRateLimit(
       request,
@@ -136,6 +140,81 @@ export async function POST(request: Request) {
         429,
         { "Retry-After": "60" },
       );
+    }
+
+    const access = await getCurrentAccess(currentUser);
+
+    if (
+      currentUser?.id &&
+      isDatabaseConfigured() &&
+      !access.databaseBacked
+    ) {
+      return errorResponse(
+        "DATABASE_UNAVAILABLE",
+        "Account access could not be verified. Please try again.",
+        503,
+      );
+    }
+
+    if (!canAccessGenerate(access)) {
+      return errorResponse(
+        "GENERATION_LIMIT_REACHED",
+        "Your current resume generation limit has been reached.",
+        403,
+      );
+    }
+
+    if (templateIdValue === "uploaded-template") {
+      if (!currentUser?.id) {
+        return errorResponse(
+          "UNAUTHORIZED",
+          "Please sign in before using a custom template.",
+          401,
+        );
+      }
+
+      if (!access.databaseBacked || !canUseFeature(access, "CUSTOM_TEMPLATE")) {
+        return errorResponse(
+          "FEATURE_NOT_AVAILABLE",
+          "Custom templates require Plus, Pro, or a Template Pass.",
+          403,
+        );
+      }
+
+      if (
+        typeof body.customTemplateId !== "string" ||
+        body.customTemplateId.length > 100
+      ) {
+        return errorResponse(
+          "INVALID_UPLOADED_TEMPLATE",
+          "Please analyze an uploaded template before generating your resume.",
+        );
+      }
+
+      const customTemplate = await prisma.customTemplate.findFirst({
+        where: {
+          id: body.customTemplateId,
+          userId: currentUser.id,
+          status: "READY",
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
+        select: { id: true, parsedSchema: true },
+      });
+      templateSpec = parseUploadedTemplateSpec(customTemplate?.parsedSchema);
+
+      if (!customTemplate || !templateSpec) {
+        return errorResponse(
+          "INVALID_UPLOADED_TEMPLATE",
+          "This custom template is unavailable or does not belong to your account.",
+          404,
+        );
+      }
+
+      customTemplateId = customTemplate.id;
+    }
+
+    if (!templateSpec) {
+      return errorResponse("INVALID_INPUT", "Please choose a valid resume template.");
     }
 
     const memoryWarnings: string[] = [];
@@ -176,6 +255,31 @@ export async function POST(request: Request) {
       memoryWarnings,
     );
 
+    let generationId: string | null = null;
+    let remainingGenerations = access.usage.remaining;
+
+    if (currentUser?.id && access.databaseBacked) {
+      const generation = await recordSuccessfulGeneration({
+        userId: currentUser.id,
+        resumeText,
+        result: { ...data, qualityWarnings },
+        targetTrack,
+        templateId: templateIdValue,
+        tone,
+        customTemplateId,
+        usedMemory: Boolean(memory),
+        saveGeneration,
+        billingPeriodStart: access.usage.periodStart
+          ? new Date(access.usage.periodStart)
+          : null,
+        billingPeriodEnd: access.usage.periodEnd
+          ? new Date(access.usage.periodEnd)
+          : null,
+      });
+      generationId = generation.id;
+      remainingGenerations = Math.max(0, access.usage.remaining - 1);
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -183,6 +287,8 @@ export async function POST(request: Request) {
         targetTrack,
         templateId: templateIdValue,
         authenticated: Boolean(currentUser),
+        generationId,
+        remainingGenerations,
         structuredResume: {
           ...data.structuredResume,
           qualityNotes: {
@@ -194,6 +300,14 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof BodyTooLargeError) {
+      return errorResponse(
+        "REQUEST_TOO_LARGE",
+        "The rewrite request is too large.",
+        413,
+      );
+    }
+
     const message = error instanceof Error ? error.message : "";
     const errorCode = message.split(":", 1)[0] || "INTERNAL_SERVER_ERROR";
 

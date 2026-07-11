@@ -59,6 +59,7 @@ export function ResumeWorkspace({ authSlot }: ResumeWorkspaceProps) {
     useState<ResumeTemplateId>("classic-ats");
   const [uploadedTemplateSpec, setUploadedTemplateSpec] =
     useState<ResumeTemplateSpec | null>(null);
+  const [customTemplateId, setCustomTemplateId] = useState<string | null>(null);
   const [uploadedTemplateFileName, setUploadedTemplateFileName] =
     useState<string | null>(null);
   const [uploadedTemplateFile, setUploadedTemplateFile] =
@@ -105,7 +106,8 @@ export function ResumeWorkspace({ authSlot }: ResumeWorkspaceProps) {
     !isLoading &&
     !isExtracting &&
     !isAnalyzingTemplate &&
-    (templateId !== "uploaded-template" || Boolean(uploadedTemplateSpec));
+    (templateId !== "uploaded-template" ||
+      Boolean(uploadedTemplateSpec && customTemplateId));
 
   async function generateResume() {
     if (!canGenerate) {
@@ -129,8 +131,8 @@ export function ResumeWorkspace({ authSlot }: ResumeWorkspaceProps) {
           resumeText,
           targetTrack,
           templateId,
-          uploadedTemplateSpec:
-            templateId === "uploaded-template" ? uploadedTemplateSpec : undefined,
+          customTemplateId:
+            templateId === "uploaded-template" ? customTemplateId : undefined,
           tone,
         }),
       });
@@ -264,8 +266,9 @@ export function ResumeWorkspace({ authSlot }: ResumeWorkspaceProps) {
                 setTemplateAnalysisError(null);
                 setError(null);
               }}
-              onAnalysisSuccess={(templateSpec, fileName, file) => {
+              onAnalysisSuccess={(templateSpec, analyzedTemplateId, fileName, file) => {
                 setUploadedTemplateSpec(templateSpec);
+                setCustomTemplateId(analyzedTemplateId);
                 setUploadedTemplateFileName(fileName);
                 setUploadedTemplateFile(file);
                 setTemplateId("uploaded-template");

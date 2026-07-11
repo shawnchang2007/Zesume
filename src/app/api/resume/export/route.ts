@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requestFitsDeclaredLimit } from "@/lib/http/body";
 import type { CareerTarget } from "@/lib/ai/types";
 import { isResumeTemplateId } from "@/lib/resume/templates";
 import { normalizeStructuredResume } from "@/lib/resume/structured";
@@ -14,6 +15,7 @@ const targetTracks = new Set<CareerTarget>([
   "finance",
   "general",
 ]);
+const MAX_EXPORT_REQUEST_SIZE = 3 * 1024 * 1024;
 
 function errorResponse(code: string, message: string, status = 400) {
   return NextResponse.json(
@@ -30,6 +32,10 @@ function errorResponse(code: string, message: string, status = 400) {
 
 export async function POST(request: Request) {
   try {
+    if (!requestFitsDeclaredLimit(request, MAX_EXPORT_REQUEST_SIZE)) {
+      return errorResponse("EXPORT_FAILED", "Export request is too large.", 413);
+    }
+
     const isMultipart = request.headers
       .get("content-type")
       ?.includes("multipart/form-data");

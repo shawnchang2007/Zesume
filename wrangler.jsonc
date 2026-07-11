@@ -26,7 +26,8 @@
     "AI_PROVIDER": "deepseek",
     "DEEPSEEK_MODEL": "deepseek-v4-flash",
     "AI_REQUEST_TIMEOUT_MS": "45000",
-    "DATABASE_RUNTIME_ENABLED": "true"
+    "DATABASE_RUNTIME_ENABLED": "true",
+    "AUTH_DATABASE_ENABLED": "true"
   },
   "ratelimits": [
     {

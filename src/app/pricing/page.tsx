@@ -6,23 +6,23 @@ const plans = [
   {
     name: "Free",
     price: "$0",
-    note: "For early testing",
+    note: "For signed-in students",
     features: [
-      "3 generations per day later",
-      "Up to 3,000 characters later",
-      "3 career templates",
-      "No saved history",
+      "3 generations per billing period",
+      "All built-in career and resume templates",
+      "Basic profile memory",
+      "Up to 3 saved history entries",
     ],
   },
   {
-    name: "Starter",
-    price: "$5",
+    name: "Plus",
+    price: "Soon",
     note: "Coming soon",
     features: [
-      "100 generations per month",
-      "Up to 8,000 characters",
-      "Saved history",
-      "No watermark",
+      "50 generations per billing period",
+      "Custom template analysis",
+      "Up to 10 saved history entries",
+      "Reusable uploaded templates",
     ],
     highlight: true,
   },
@@ -31,10 +31,10 @@ const plans = [
     price: "Soon",
     note: "Not in v1",
     features: [
-      "Advanced templates",
-      "More providers",
-      "Resume versions",
-      "Future export options",
+      "100 generations per billing period",
+      "Career Experience memory",
+      "Profile import and generation",
+      "Up to 20 saved history entries",
     ],
   },
 ];
@@ -45,10 +45,10 @@ export default function PricingPage() {
       <Nav />
       <section className="section">
         <div className="eyebrow">Pricing</div>
-        <h1 className="section-title">Simple while Zesume is in MVP.</h1>
+        <h1 className="section-title">Start focused. Upgrade when you need depth.</h1>
         <p className="section-copy">
-          The first local version is free to test with the mock provider. Payment,
-          accounts, history, and usage limits are intentionally left for later.
+          Every plan keeps factual accuracy first. Paid plan checkout is coming
+          soon; server-side access rules and usage tracking are already in place.
         </p>
         <div className="pricing-grid">
           {plans.map((plan) => (
