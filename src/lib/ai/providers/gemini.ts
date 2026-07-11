@@ -1,4 +1,6 @@
 import { buildRewritePrompt } from "../prompts";
+import { fetchWithAiTimeout } from "../fetch-with-timeout";
+import { parseRewriteModelOutput } from "../parse-output";
 import type { RewriteResumeInput, RewriteResumeOutput } from "../types";
 
 type GeminiResponse = {
@@ -8,12 +10,6 @@ type GeminiResponse = {
     };
   }>;
 };
-
-function extractJson(text: string) {
-  const trimmed = text.trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  return fenced?.[1] ?? trimmed;
-}
 
 export async function rewriteWithGemini(
   input: RewriteResumeInput,
@@ -25,27 +21,37 @@ export async function rewriteWithGemini(
     throw new Error("AI_CONFIG_ERROR: GEMINI_API_KEY is required.");
   }
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: buildRewritePrompt(input) }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.4,
-          responseMimeType: "application/json",
+  let response: Response;
+
+  try {
+    response = await fetchWithAiTimeout(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      }),
-    },
-  );
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: buildRewritePrompt(input) }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.4,
+            responseMimeType: "application/json",
+          },
+        }),
+      },
+    );
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("AI_TIMEOUT")) {
+      throw error;
+    }
+
+    throw new Error("AI_REQUEST_FAILED: Gemini request failed.");
+  }
 
   if (!response.ok) {
     throw new Error("AI_REQUEST_FAILED: Gemini request failed.");
@@ -59,32 +65,7 @@ export async function rewriteWithGemini(
   }
 
   try {
-    const parsed = JSON.parse(extractJson(text)) as {
-      rewrittenResume?: unknown;
-      suggestions?: unknown;
-      qualityWarnings?: unknown;
-    };
-
-    if (
-      typeof parsed.rewrittenResume !== "string" ||
-      !Array.isArray(parsed.suggestions)
-    ) {
-      throw new Error("Invalid Gemini JSON shape.");
-    }
-
-    return {
-      rewrittenResume: parsed.rewrittenResume,
-      suggestions: parsed.suggestions.filter(
-        (suggestion): suggestion is string => typeof suggestion === "string",
-      ),
-      qualityWarnings: Array.isArray(parsed.qualityWarnings)
-        ? parsed.qualityWarnings.filter(
-            (warning): warning is string => typeof warning === "string",
-          )
-        : [],
-      provider: "gemini",
-      model,
-    };
+    return parseRewriteModelOutput(text, "gemini", model);
   } catch {
     throw new Error("AI_REQUEST_FAILED: Gemini returned invalid JSON.");
   }

@@ -1,20 +1,20 @@
 "use client";
 
 import { Download, FileText, Loader2 } from "lucide-react";
-import type { TargetTemplate } from "@/lib/ai/types";
+import type { CareerTarget, StructuredResume } from "@/lib/ai/types";
+import type { ResumeTemplateId } from "@/lib/resume/templates";
 
 type DownloadButtonsProps = {
   resumeText: string;
-  targetTemplate: TargetTemplate;
+  targetTrack: CareerTarget;
+  templateId: ResumeTemplateId;
+  structuredResume: StructuredResume | null;
+  uploadedTemplateFile: File | null;
   disabled: boolean;
   isExporting: boolean;
   onExportingChange: (value: boolean) => void;
   onExportErrorChange: (error: string | null) => void;
 };
-
-function fileTemplateName(targetTemplate: TargetTemplate) {
-  return targetTemplate.replace(/_/g, "-");
-}
 
 function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
@@ -29,13 +29,22 @@ function downloadBlob(blob: Blob, fileName: string) {
 
 export function DownloadButtons({
   resumeText,
-  targetTemplate,
+  targetTrack,
+  templateId,
+  structuredResume,
+  uploadedTemplateFile,
   disabled,
   isExporting,
   onExportingChange,
   onExportErrorChange,
 }: DownloadButtonsProps) {
-  const baseName = `zesume-${fileTemplateName(targetTemplate)}`;
+  const baseName = `zesume-${templateId}`;
+  const usesUploadedTemplate = templateId === "uploaded-template";
+  const canMatchUploadedDocx = Boolean(
+    usesUploadedTemplate &&
+      uploadedTemplateFile?.name.toLowerCase().endsWith(".docx") &&
+      structuredResume,
+  );
 
   function downloadTxt() {
     if (disabled) return;
@@ -50,16 +59,33 @@ export function DownloadButtons({
     onExportErrorChange(null);
 
     try {
+      const isUploadedTemplate =
+        canMatchUploadedDocx &&
+        structuredResume &&
+        uploadedTemplateFile;
+      const requestBody = isUploadedTemplate
+        ? (() => {
+            const formData = new FormData();
+            formData.append("resumeText", resumeText);
+            formData.append("targetTrack", targetTrack);
+            formData.append("templateId", templateId);
+            formData.append("format", "docx");
+            formData.append("structuredResume", JSON.stringify(structuredResume));
+            formData.append("templateFile", uploadedTemplateFile);
+            return formData;
+          })()
+        : JSON.stringify({
+            resumeText,
+            targetTrack,
+            templateId,
+            format: "docx",
+          });
       const response = await fetch("/api/resume/export", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          resumeText,
-          targetTemplate,
-          format: "docx",
-        }),
+        headers: isUploadedTemplate
+          ? undefined
+          : { "Content-Type": "application/json" },
+        body: requestBody,
       });
 
       if (!response.ok) {
@@ -101,7 +127,11 @@ export function DownloadButtons({
         ) : (
           <Download size={16} aria-hidden="true" />
         )}
-        {isExporting ? "Exporting" : "Download DOCX"}
+        {isExporting
+          ? "Exporting"
+          : canMatchUploadedDocx
+            ? "Download matched DOCX"
+            : "Download DOCX"}
       </button>
     </>
   );

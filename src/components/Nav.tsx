@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { UserMenu } from "@/components/auth/UserMenu";
 
-export function Nav() {
+export async function Nav() {
   return (
     <header className="nav">
       <Link className="brand" href="/">
@@ -12,6 +13,7 @@ export function Nav() {
         <Link href="/app">Rewriter</Link>
         <Link href="/pricing">Pricing</Link>
         <a href="https://github.com/shawnchang2007/Zesume">GitHub</a>
+        <UserMenu />
         <Link className="button button-primary" href="/app">
           Try Zesume
           <ArrowRight size={16} aria-hidden="true" />

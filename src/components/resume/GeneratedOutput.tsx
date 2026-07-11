@@ -5,7 +5,8 @@ import {
   ClipboardCheck,
   RefreshCw,
 } from "lucide-react";
-import type { TargetTemplate } from "@/lib/ai/types";
+import type { CareerTarget, StructuredResume } from "@/lib/ai/types";
+import type { ResumeTemplateId } from "@/lib/resume/templates";
 import { DownloadButtons } from "./DownloadButtons";
 
 type GeneratedOutputProps = {
@@ -17,7 +18,10 @@ type GeneratedOutputProps = {
   isLoading: boolean;
   isExporting: boolean;
   exportError: string | null;
-  targetTemplate: TargetTemplate;
+  targetTrack: CareerTarget;
+  templateId: ResumeTemplateId;
+  structuredResume: StructuredResume | null;
+  uploadedTemplateFile: File | null;
   onCopy: () => void;
   onRegenerate: () => void;
   onExportingChange: (value: boolean) => void;
@@ -33,7 +37,10 @@ export function GeneratedOutput({
   isLoading,
   isExporting,
   exportError,
-  targetTemplate,
+  targetTrack,
+  templateId,
+  structuredResume,
+  uploadedTemplateFile,
   onCopy,
   onRegenerate,
   onExportingChange,
@@ -85,7 +92,10 @@ export function GeneratedOutput({
           onExportErrorChange={onExportErrorChange}
           onExportingChange={onExportingChange}
           resumeText={rewrittenResume}
-          targetTemplate={targetTemplate}
+          targetTrack={targetTrack}
+          templateId={templateId}
+          structuredResume={structuredResume}
+          uploadedTemplateFile={uploadedTemplateFile}
         />
       </div>
 

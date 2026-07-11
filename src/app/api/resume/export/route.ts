@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
+import type { CareerTarget } from "@/lib/ai/types";
+import { isResumeTemplateId } from "@/lib/resume/templates";
+import { normalizeStructuredResume } from "@/lib/resume/structured";
 import {
-  Document,
-  Packer,
-  Paragraph,
-  TextRun,
-} from "docx";
-import type { TargetTemplate } from "@/lib/ai/types";
+  renderBasicResumeDocx,
+  renderResumeIntoUploadedTemplate,
+} from "@/lib/resume/template-docx";
+import { getFileExtension, MAX_RESUME_FILE_SIZE } from "@/lib/resume/file-extraction";
 
-const targetTemplates = new Set<TargetTemplate>([
+const targetTracks = new Set<CareerTarget>([
   "software_engineering",
   "quant",
   "finance",
+  "general",
 ]);
 
 function errorResponse(code: string, message: string, status = 400) {
@@ -26,105 +28,122 @@ function errorResponse(code: string, message: string, status = 400) {
   );
 }
 
-function isSectionHeading(line: string) {
-  const trimmed = line.trim();
-  return (
-    trimmed.length > 0 &&
-    trimmed.length <= 48 &&
-    !trimmed.startsWith("-") &&
-    !trimmed.startsWith("*") &&
-    /^[A-Z][A-Z0-9 /&()'-]+$/.test(trimmed)
-  );
-}
-
-function createParagraph(line: string) {
-  const trimmed = line.trim();
-
-  if (!trimmed) {
-    return new Paragraph({ text: "" });
-  }
-
-  if (trimmed.startsWith("-") || trimmed.startsWith("*")) {
-    return new Paragraph({
-      bullet: { level: 0 },
-      children: [
-        new TextRun({
-          text: trimmed.replace(/^[-*]\s*/, ""),
-          size: 22,
-        }),
-      ],
-      spacing: { after: 80 },
-    });
-  }
-
-  if (isSectionHeading(trimmed)) {
-    return new Paragraph({
-      children: [
-        new TextRun({
-          text: trimmed,
-          bold: true,
-          size: 26,
-        }),
-      ],
-      spacing: { before: 220, after: 100 },
-    });
-  }
-
-  return new Paragraph({
-    children: [
-      new TextRun({
-        text: trimmed,
-        size: 22,
-      }),
-    ],
-    spacing: { after: 80 },
-  });
-}
-
-function fileTemplateName(targetTemplate: TargetTemplate) {
-  return targetTemplate.replace(/_/g, "-");
-}
-
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as {
+    const isMultipart = request.headers
+      .get("content-type")
+      ?.includes("multipart/form-data");
+    let body: {
       resumeText?: unknown;
+      targetTrack?: unknown;
       targetTemplate?: unknown;
+      templateId?: unknown;
       format?: unknown;
+      structuredResume?: unknown;
+      templateFile?: unknown;
     };
+
+    if (isMultipart) {
+      const formData = await request.formData();
+      const structuredResumeText = formData.get("structuredResume");
+      let structuredResume: unknown;
+
+      if (typeof structuredResumeText === "string") {
+        try {
+          structuredResume = JSON.parse(structuredResumeText);
+        } catch {
+          return errorResponse(
+            "EXPORT_FAILED",
+            "The structured resume data is invalid.",
+          );
+        }
+      }
+
+      body = {
+        resumeText: formData.get("resumeText"),
+        targetTrack: formData.get("targetTrack"),
+        templateId: formData.get("templateId"),
+        format: formData.get("format"),
+        structuredResume,
+        templateFile: formData.get("templateFile"),
+      };
+    } else {
+      body = (await request.json()) as typeof body;
+    }
 
     if (typeof body.resumeText !== "string" || !body.resumeText.trim()) {
       return errorResponse("EXPORT_FAILED", "Resume text is required.");
     }
 
+    const targetTrackValue = body.targetTrack ?? body.targetTemplate;
+
     if (
-      typeof body.targetTemplate !== "string" ||
-      !targetTemplates.has(body.targetTemplate as TargetTemplate)
+      typeof targetTrackValue !== "string" ||
+      !targetTracks.has(targetTrackValue as CareerTarget)
     ) {
-      return errorResponse("EXPORT_FAILED", "Please choose a valid target template.");
+      return errorResponse("EXPORT_FAILED", "Please choose a valid career target.");
     }
+
+    const fallbackTemplateId = targetTrackValue.replace(/_/g, "-");
+    const templateId =
+      typeof body.templateId === "string" &&
+      isResumeTemplateId(body.templateId)
+        ? body.templateId
+        : fallbackTemplateId;
 
     if (body.format !== "docx") {
       return errorResponse("EXPORT_FAILED", "Only DOCX export is supported here.");
     }
 
-    const paragraphs = body.resumeText
-      .replace(/\r\n/g, "\n")
-      .split("\n")
-      .map(createParagraph);
+    if (templateId === "uploaded-template" && isMultipart) {
+      if (!(body.templateFile instanceof File)) {
+        return errorResponse(
+          "EXPORT_FAILED",
+          "The original uploaded template is required for template-matched export.",
+        );
+      }
 
-    const document = new Document({
-      sections: [
-        {
-          properties: {},
-          children: paragraphs,
+      if (
+        body.templateFile.size > MAX_RESUME_FILE_SIZE ||
+        getFileExtension(body.templateFile.name) !== ".docx"
+      ) {
+        return errorResponse(
+          "EXPORT_FAILED",
+          "Template-matched export requires a .docx template under 2MB.",
+        );
+      }
+
+      const structuredResume = normalizeStructuredResume(body.structuredResume);
+
+      if (!structuredResume) {
+        return errorResponse(
+          "EXPORT_FAILED",
+          "The generated structured resume is required for template-matched export.",
+        );
+      }
+
+      const renderedTemplate = await renderResumeIntoUploadedTemplate({
+        templateFile: body.templateFile,
+        structuredResume,
+        targetTrack: targetTrackValue as CareerTarget,
+      });
+      const templateBody = new Blob([new Uint8Array(renderedTemplate)], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+
+      return new NextResponse(templateBody, {
+        headers: {
+          "Content-Disposition":
+            'attachment; filename="zesume-uploaded-template.docx"',
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "X-Zesume-Export-Mode": "template-matched",
         },
-      ],
-    });
+      });
+    }
 
-    const buffer = await Packer.toBuffer(document);
-    const targetTemplate = body.targetTemplate as TargetTemplate;
-    const fileName = `zesume-${fileTemplateName(targetTemplate)}.docx`;
+    const buffer = await renderBasicResumeDocx(body.resumeText);
+    const fileName = `zesume-${templateId}.docx`;
 
     const docxBody = new Blob([new Uint8Array(buffer)], {
       type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

@@ -1,9 +1,11 @@
 import type { RewriteResumeInput, RewriteResumeOutput } from "../types";
+import { renderStructuredResume } from "@/lib/resume/structured";
 
 const templateLabels = {
   software_engineering: "Software Engineering",
   quant: "Quant",
   finance: "Finance / Spring Week",
+  general: "General Internship",
 };
 
 const templateBullets = {
@@ -19,6 +21,10 @@ const templateBullets = {
     "Repositioned leadership, teamwork, communication, and initiative for early-career finance applications.",
     "Reduced excessive technical detail and emphasized responsibility, collaboration, and commercial awareness.",
   ],
+  general: [
+    "Reframed the strongest experience around transferable problem-solving, collaboration, and ownership.",
+    "Balanced projects, activities, and skills for broad internship applications.",
+  ],
 };
 
 export async function rewriteWithMock(
@@ -26,32 +32,52 @@ export async function rewriteWithMock(
 ): Promise<RewriteResumeOutput> {
   await new Promise((resolve) => setTimeout(resolve, 700));
 
+  const structuredResume = {
+    header: {
+      name: "Your Name",
+      location: "",
+      email: "",
+      phone: "",
+      links: [],
+    },
+    sections: input.templateSpec.sectionOrder.map((title) => ({
+      title,
+      items: [
+        {
+          name: title.toLowerCase().includes("project")
+            ? "Relevant Project"
+            : "Selected Entry",
+          role: "",
+          organization: "",
+          date: "",
+          location: "",
+          meta: "",
+          details: title.toLowerCase().includes("skill")
+            ? ["Group only the skills already present in the source resume."]
+            : [],
+          bullets: title.toLowerCase().includes("project")
+            ? templateBullets[input.targetTrack]
+            : [
+                `Reframed source material for ${templateLabels[input.targetTrack]} applications while preserving the original facts.`,
+              ],
+        },
+      ],
+    })),
+    qualityNotes: {
+      majorChangesMade: [
+        `Applied the ${input.templateSpec.name} section order and bullet style.`,
+      ],
+      missingInformation: [
+        "Add measurable impact where possible, but only when the metric is real.",
+      ],
+      warnings: [],
+    },
+  };
+
   return {
-    rewrittenResume: `EDUCATION
-
-Your University
-- Reframed academic background for ${templateLabels[input.targetTemplate]} applications while preserving the original facts provided.
-
-EXPERIENCE
-
-Selected Experience
-- Strengthened resume bullets with concise action verbs and clearer ownership.
-- Improved phrasing to match a ${input.tone} tone without adding companies, awards, grades, or metrics.
-
-PROJECTS
-
-Relevant Projects
-- ${templateBullets[input.targetTemplate][0]}
-- ${templateBullets[input.targetTemplate][1]}
-
-SKILLS
-
-Use this section to group only the skills already present in your resume, such as languages, tools, frameworks, finance concepts, or research methods.`,
-    suggestions: [
-      "Add measurable impact where possible, but only if the metric is real.",
-      "Keep each bullet focused on action, method, and outcome.",
-      "Separate skills into clear groups such as languages, frameworks, tools, and domain knowledge.",
-    ],
+    structuredResume,
+    rewrittenResume: renderStructuredResume(structuredResume),
+    suggestions: structuredResume.qualityNotes.missingInformation,
     qualityWarnings: [],
     provider: "mock",
     model: process.env.AI_MODEL || "mock-resume-rewriter",

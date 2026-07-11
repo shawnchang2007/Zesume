@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
-import mammoth from "mammoth";
+import {
+  extractTextFromResumeFile,
+  getFileExtension,
+  MAX_RESUME_FILE_SIZE,
+  normalizeExtractedText,
+  type SupportedResumeFileExtension,
+} from "@/lib/resume/file-extraction";
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
 const MIN_EXTRACTED_TEXT_LENGTH = 20;
 
 function errorResponse(code: string, message: string, status = 400) {
@@ -17,11 +22,6 @@ function errorResponse(code: string, message: string, status = 400) {
   );
 }
 
-function getExtension(fileName: string) {
-  const index = fileName.lastIndexOf(".");
-  return index === -1 ? "" : fileName.slice(index).toLowerCase();
-}
-
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -31,14 +31,14 @@ export async function POST(request: Request) {
       return errorResponse("NO_FILE", "Please upload a .txt or .docx file.");
     }
 
-    if (file.size > MAX_FILE_SIZE) {
+    if (file.size > MAX_RESUME_FILE_SIZE) {
       return errorResponse(
         "FILE_TOO_LARGE",
         "File is too large. Please upload a file under 2MB.",
       );
     }
 
-    const extension = getExtension(file.name);
+    const extension = getFileExtension(file.name);
 
     if (extension === ".pdf" || file.type === "application/pdf") {
       return errorResponse(
@@ -54,16 +54,13 @@ export async function POST(request: Request) {
       );
     }
 
-    let extractedText = "";
+    let extractedText: string;
 
     try {
-      if (extension === ".txt") {
-        extractedText = await file.text();
-      } else {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const result = await mammoth.extractRawText({ buffer });
-        extractedText = result.value;
-      }
+      extractedText = await extractTextFromResumeFile(
+        file,
+        extension as SupportedResumeFileExtension,
+      );
     } catch {
       return errorResponse(
         "EXTRACTION_FAILED",
@@ -71,7 +68,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const normalizedText = extractedText.replace(/\r\n/g, "\n").trim();
+    const normalizedText = normalizeExtractedText(extractedText);
 
     if (normalizedText.length < MIN_EXTRACTED_TEXT_LENGTH) {
       return errorResponse(

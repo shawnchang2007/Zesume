@@ -1,34 +1,158 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  runtime  = "cloudflare"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum Plan {
+  FREE
+  PLUS
+  PRO
+}
 
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  EXPIRED
+}
+
+enum EntitlementType {
+  CUSTOM_TEMPLATE_PASS
+}
+
+enum UsageType {
+  RESUME_GENERATION
+  CUSTOM_TEMPLATE_PARSE
+  PROFILE_IMPORT
+}
+
+enum TemplateStatus {
+  PROCESSING
+  READY
+  LOCKED
+  FAILED
+  DELETED
+}
+
+enum GenerationSource {
+  UPLOAD
+  PROFILE
+  COMBINED
+}
+
+enum CareerItemType {
+  EDUCATION
+  EMPLOYMENT
+  INTERNSHIP
+  PROJECT
+  RESEARCH
+  AWARD
+  ACTIVITY
+  COMPETITION
+  CERTIFICATION
+  COURSEWORK
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
   profile           UserProfile?
   preferences       UserPreference?
   experiences       Experience[]
+  subscriptions     Subscription[]
+  entitlements      Entitlement[]
+  usageEvents       UsageEvent[]
+  customTemplates   CustomTemplate[]
   resumeGenerations ResumeGeneration[]
+  careerItems       CareerItem[]
+  importDrafts      ResumeImportDraft[]
 
   @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
 }
 
 model UserProfile {
   id     String @id @default(cuid())
   userId String @unique
 
-  fullName           String?
+  fullName        String?
+  contactEmail    String?
+  phone           String?
+  location        String?
+  school          String?
+  degree          String?
+  major           String?
+  graduationYear  Int?
+  linkedinUrl     String?
+  githubUrl       String?
+  portfolioUrl    String?
+  targetRoles     String[]
+  targetLocations String[]
+
+  preferredTone     String?
+  preferredLanguage String?
+  spellingStyle     String?
+  resumeLength      String?
+
+  // Retained for compatibility with the existing Phase 1 memory services.
   educationSummary   String?
   careerStage        String?
-  targetRoles        String[]
   industries         String[]
   locationPreference String?
   notes              String?
@@ -41,21 +165,149 @@ model UserProfile {
   @@map("user_profiles")
 }
 
-model Experience {
+model UserPreference {
   id     String @id @default(cuid())
-  userId String
+  userId String @unique
 
+  preferredTone        String?
+  preferredBulletStyle String?
+  avoidPhrases         String[]
+  defaultTemplate      String?
+  defaultUseMemory     Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String
+  plan                   Plan
+  status                 SubscriptionStatus
+  provider               String
+  providerCustomerId     String?
+  providerSubscriptionId String?            @unique
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean            @default(false)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([providerCustomerId])
+  @@map("subscriptions")
+}
+
+model Entitlement {
+  id                String          @id @default(cuid())
+  userId            String
+  type              EntitlementType
+  totalQuantity     Int             @default(1)
+  remainingQuantity Int             @default(1)
+  providerPaymentId String?         @unique
+  status            String
+  expiresAt         DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type, status])
+  @@map("entitlements")
+}
+
+model UsageEvent {
+  id                 String    @id @default(cuid())
+  userId             String
+  type               UsageType
+  generationId       String?   @unique
+  billingPeriodStart DateTime?
+  billingPeriodEnd   DateTime?
+  createdAt          DateTime  @default(now())
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generation ResumeGeneration? @relation(fields: [generationId], references: [id], onDelete: SetNull)
+
+  @@index([userId, type, createdAt])
+  @@map("usage_events")
+}
+
+model CustomTemplate {
+  id               String         @id @default(cuid())
+  userId           String
+  name             String
+  originalFileName String?
+  mimeType         String?
+  storageKey       String?
+  parsedSchema     Json?
+  previewText      String?
+  status           TemplateStatus
+  createdWithPass  Boolean        @default(false)
+  reusable         Boolean        @default(false)
+  expiresAt        DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generations ResumeGeneration[]
+
+  @@index([userId, status])
+  @@map("custom_templates")
+}
+
+model ResumeGeneration {
+  id               String           @id @default(cuid())
+  userId           String
+  source           GenerationSource @default(UPLOAD)
+  targetTemplate   String
+  tone             String
+  customTemplateId String?
+
+  inputResumeText   String?  @db.Text
+  rewrittenResume   String?  @db.Text
+  suggestions       String[]
+  qualityWarnings   String[]
+  profileFieldsUsed Json?
+  profileConflicts  Json?
+
+  usedMemory     Boolean   @default(false)
+  memorySnapshot Json?
+  title          String?
+  isSaved        Boolean   @default(true)
+  isPinned       Boolean   @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customTemplate CustomTemplate? @relation(fields: [customTemplateId], references: [id], onDelete: SetNull)
+  usageEvent     UsageEvent?
+
+  @@index([userId, createdAt])
+  @@index([userId, deletedAt])
+  @@map("resume_generations")
+}
+
+// Legacy experience tables remain available while CareerItem APIs are phased in.
+model Experience {
+  id           String    @id @default(cuid())
+  userId       String
   title        String
   organization String?
   category     String
   description  String?
   startDate    DateTime?
   endDate      DateTime?
-  isCurrent    Boolean  @default(false)
+  isCurrent    Boolean   @default(false)
   tags         String[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   bullets ExperienceBullet[]
@@ -66,16 +318,14 @@ model Experience {
 }
 
 model ExperienceBullet {
-  id           String @id @default(cuid())
+  id           String   @id @default(cuid())
   experienceId String
-
-  content    String
-  source     String?
-  tags       String[]
-  confidence Float?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  content      String
+  source       String?
+  tags         String[]
+  confidence   Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   experience Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
 
@@ -83,48 +333,117 @@ model ExperienceBullet {
   @@map("experience_bullets")
 }
 
-model UserPreference {
-  id     String @id @default(cuid())
-  userId String @unique
+model CareerItem {
+  id           String         @id @default(cuid())
+  userId       String
+  type         CareerItemType
+  title        String
+  organization String?
+  location     String?
+  startDate    DateTime?
+  endDate      DateTime?
+  isCurrent    Boolean        @default(false)
+  summary      String?
+  rawContent   String?        @db.Text
+  metadata     Json?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
 
-  preferredTone        String?
-  preferredBulletStyle String?
-  avoidPhrases         String[]
-  defaultTemplate      String?
-  defaultUseMemory     Boolean @default(false)
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bullets CareerItemBullet[]
+  skills  CareerItemSkill[]
+  tags    CareerItemTag[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("user_preferences")
+  @@index([userId, type, deletedAt])
+  @@map("career_items")
 }
 
-model ResumeGeneration {
-  id     String @id @default(cuid())
-  userId String
+model CareerItemBullet {
+  id             String   @id @default(cuid())
+  careerItemId   String
+  content        String
+  source         String
+  targetTemplate String?
+  tone           String?
+  displayOrder   Int      @default(0)
+  isFavorite     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  targetTemplate String
-  tone           String
+  careerItem CareerItem @relation(fields: [careerItemId], references: [id], onDelete: Cascade)
 
-  inputResumeText String?
-  rewrittenResume String?
-  suggestions     String[]
-  qualityWarnings String[]
+  @@index([careerItemId, displayOrder])
+  @@map("career_item_bullets")
+}
 
-  usedMemory     Boolean @default(false)
-  memorySnapshot Json?
+model Skill {
+  id             String  @id @default(cuid())
+  name           String
+  normalizedName String  @unique
+  category       String?
 
-  title   String?
-  isSaved Boolean @default(true)
+  careerItems CareerItemSkill[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@map("skills")
+}
+
+model CareerItemSkill {
+  id           String @id @default(cuid())
+  careerItemId String
+  skillId      String
+
+  careerItem CareerItem @relation(fields: [careerItemId], references: [id], onDelete: Cascade)
+  skill      Skill      @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([careerItemId, skillId])
+  @@index([skillId])
+  @@map("career_item_skills")
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+
+  careerItems CareerItemTag[]
+
+  @@map("tags")
+}
+
+model CareerItemTag {
+  id           String @id @default(cuid())
+  careerItemId String
+  tagId        String
+
+  careerItem CareerItem @relation(fields: [careerItemId], references: [id], onDelete: Cascade)
+  tag        Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([careerItemId, tagId])
+  @@index([tagId])
+  @@map("career_item_tags")
+}
+
+model ResumeImportDraft {
+  id         String   @id @default(cuid())
+  userId     String
+  parsedData Json
+  warnings   Json?
+  status     String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([createdAt])
-  @@map("resume_generations")
+  @@index([userId, status, expiresAt])
+  @@map("resume_import_drafts")
+}
+
+model BillingWebhookEvent {
+  id          String   @id
+  provider    String
+  eventType   String
+  processedAt DateTime @default(now())
+
+  @@map("billing_webhook_events")
 }

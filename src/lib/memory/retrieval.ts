@@ -45,6 +45,16 @@ const templateKeywords: Record<TargetTemplate, string[]> = {
     "commercial",
     "investment",
   ],
+  general: [
+    "project",
+    "experience",
+    "leadership",
+    "teamwork",
+    "research",
+    "analysis",
+    "communication",
+    "internship",
+  ],
 };
 
 function scoreExperience(
