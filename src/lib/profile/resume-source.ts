@@ -13,7 +13,7 @@ export async function buildProfileResumeSource(userId: string) {
   const [profile, careerItems] = await Promise.all([
     prisma.userProfile.findUnique({ where: { userId } }),
     prisma.careerItem.findMany({
-      where: { userId, deletedAt: null },
+      where: { userId, deletedAt: null, memoryEnabled: true },
       include: {
         bullets: { orderBy: { displayOrder: "asc" } },
         skills: { include: { skill: true } },
@@ -55,8 +55,7 @@ export async function buildProfileResumeSource(userId: string) {
     const lines = compact([
       item.title,
       compact([item.organization, item.location, date]).join(" | "),
-      item.summary,
-      item.rawContent,
+      item.optimizedDescription ?? item.summary ?? item.rawContent,
       skills.length ? `Skills: ${skills.join(", ")}` : null,
       tags.length ? `Tags: ${tags.join(", ")}` : null,
       ...item.bullets.map((bullet) => `- ${bullet.content}`),

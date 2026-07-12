@@ -12,7 +12,6 @@ export async function Nav() {
       <nav className="nav-links" aria-label="Main navigation">
         <Link href="/app">Rewriter</Link>
         <Link href="/pricing">Pricing</Link>
-        <a href="https://github.com/shawnchang2007/Zesume">GitHub</a>
         <UserMenu />
         <Link className="button button-primary" href="/app">
           Try Zesume

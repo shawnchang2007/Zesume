@@ -206,7 +206,7 @@ export default async function DashboardPage() {
             <div className="locked-content">
               <span className="gold-tier">PRO</span>
               <p>Save projects, internships, education, awards, and tailored bullet versions.</p>
-              {!careerOpen ? <Link className="button button-secondary" href="/pricing">Upgrade to Pro</Link> : null}
+              {careerOpen ? <Link className="button button-secondary" href="/dashboard/memory">Manage Career Memory</Link> : <Link className="button button-secondary" href="/pricing">Upgrade to Pro</Link>}
             </div>
           </section>
 
@@ -222,7 +222,7 @@ export default async function DashboardPage() {
               <span className="gold-tier">PRO</span>
               <p>Import your Basic Profile and Career Experience directly into Resume Studio.</p>
               {importOpen ? (
-                <Link className="button button-secondary" href="/app#import-resume">Import from Profile</Link>
+                <Link className="button button-secondary" href="/dashboard/memory#import-memory">Upload resume</Link>
               ) : (
                 <Link className="button button-secondary" href="/pricing">Upgrade to Pro</Link>
               )}

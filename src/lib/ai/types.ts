@@ -115,3 +115,15 @@ export type AnalyzeResumeTemplateOutput = {
   provider: "deepseek";
   model: string;
 };
+
+export type AnalyzeCareerImportInput = {
+  resumeText: string;
+  fileName: string;
+};
+
+export type AnalyzeCareerImportOutput = {
+  items: import("@/lib/career-items/types").CareerItemInput[];
+  warnings: string[];
+  provider: string;
+  model: string;
+};

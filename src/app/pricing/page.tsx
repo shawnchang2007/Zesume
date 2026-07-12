@@ -33,6 +33,7 @@ const plans = [
     features: [
       "100 generations per billing period",
       "Career Experience memory",
+      "Resume-to-Memory import with review",
       "Profile import and generation",
       "Up to 20 saved history entries",
     ],

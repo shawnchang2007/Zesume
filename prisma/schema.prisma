@@ -56,6 +56,8 @@ enum CareerItemType {
   COMPETITION
   CERTIFICATION
   COURSEWORK
+  SKILL
+  VOLUNTEERING
 }
 
 model User {
@@ -332,21 +334,23 @@ model ExperienceBullet {
 }
 
 model CareerItem {
-  id           String         @id @default(cuid())
-  userId       String
-  type         CareerItemType
-  title        String
-  organization String?
-  location     String?
-  startDate    DateTime?
-  endDate      DateTime?
-  isCurrent    Boolean        @default(false)
-  summary      String?
-  rawContent   String?        @db.Text
-  metadata     Json?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  deletedAt    DateTime?
+  id                   String         @id @default(cuid())
+  userId               String
+  type                 CareerItemType
+  title                String
+  organization         String?
+  location             String?
+  startDate            DateTime?
+  endDate              DateTime?
+  isCurrent            Boolean        @default(false)
+  summary              String?
+  rawContent           String?        @db.Text
+  optimizedDescription String?        @db.Text
+  memoryEnabled        Boolean        @default(true)
+  metadata             Json?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  deletedAt            DateTime?
 
   user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   bullets CareerItemBullet[]

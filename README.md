@@ -24,6 +24,9 @@ AI resume rewriting for Gen Z applicants.
 - Download generated results as `.docx`
 - Explicitly save generated resumes to account history and download them later
   as `.txt` or `.docx` from the Dashboard
+- Pro Career Memory with editable Education, Work Experience, Project, Award,
+  Skill, Certification, and Volunteering items
+- Pro resume-to-Memory import with an AI draft that must be reviewed before save
 - Sign in and sign out with Google through Auth.js
 - Continue using the core rewriter without an account
 

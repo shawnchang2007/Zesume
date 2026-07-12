@@ -69,6 +69,7 @@ function scoreExperience(
     experience.type,
     experience.summary,
     experience.rawContent,
+    experience.optimizedDescription,
     experience.tags.map(({ tag }) => tag.name).join(" "),
     experience.skills.map(({ skill }) => skill.name).join(" "),
     experience.bullets.map((bullet) => bullet.content).join(" "),
@@ -107,7 +108,8 @@ export async function getMemoryForRewrite({
       title: experience.title,
       organization: experience.organization,
       category: experience.type,
-      description: experience.summary ?? experience.rawContent,
+      description:
+        experience.optimizedDescription ?? experience.summary ?? experience.rawContent,
       tags: [
         ...experience.tags.map(({ tag }) => tag.name),
         ...experience.skills.map(({ skill }) => skill.name),
