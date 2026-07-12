@@ -196,7 +196,7 @@ export async function POST(request: Request) {
           id: body.customTemplateId,
           userId: currentUser.id,
           status: "READY",
-          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+          expiresAt: { gt: new Date() },
         },
         select: { id: true, parsedSchema: true },
       });

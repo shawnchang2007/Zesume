@@ -22,6 +22,7 @@ import type {
   ResumeTemplateId,
   ResumeTemplateSpec,
 } from "@/lib/resume/templates";
+import type { AccessPlan } from "@/lib/billing/plan-config";
 
 const MIN_RESUME_LENGTH = 200;
 const MAX_RESUME_LENGTH = 5000;
@@ -49,9 +50,17 @@ type RewriteResponse =
 
 type ResumeWorkspaceProps = {
   authSlot: ReactNode;
+  canImportFromProfile: boolean;
+  canUploadTemplate: boolean;
+  plan: AccessPlan;
 };
 
-export function ResumeWorkspace({ authSlot }: ResumeWorkspaceProps) {
+export function ResumeWorkspace({
+  authSlot,
+  canImportFromProfile,
+  canUploadTemplate,
+  plan,
+}: ResumeWorkspaceProps) {
   const [resumeText, setResumeText] = useState("");
   const [targetTrack, setTargetTrack] =
     useState<CareerTarget>("software_engineering");
@@ -85,9 +94,11 @@ export function ResumeWorkspace({ authSlot }: ResumeWorkspaceProps) {
   const [providerMeta, setProviderMeta] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [isImportingProfile, setIsImportingProfile] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [saveGeneration, setSaveGeneration] = useState(false);
 
   const characterMessage = useMemo(() => {
     if (!resumeText.length) return "Paste or upload 200-5,000 characters";
@@ -105,6 +116,7 @@ export function ResumeWorkspace({ authSlot }: ResumeWorkspaceProps) {
     resumeText.trim().length <= MAX_RESUME_LENGTH &&
     !isLoading &&
     !isExtracting &&
+    !isImportingProfile &&
     !isAnalyzingTemplate &&
     (templateId !== "uploaded-template" ||
       Boolean(uploadedTemplateSpec && customTemplateId));
@@ -134,6 +146,7 @@ export function ResumeWorkspace({ authSlot }: ResumeWorkspaceProps) {
           customTemplateId:
             templateId === "uploaded-template" ? customTemplateId : undefined,
           tone,
+          saveGeneration,
         }),
       });
 
@@ -223,8 +236,10 @@ export function ResumeWorkspace({ authSlot }: ResumeWorkspaceProps) {
         <div className="workspace">
           <section className="panel input-panel" aria-label="Resume input">
             <ResumeUploader
+              canImportFromProfile={canImportFromProfile}
               extractError={extractError}
               isExtracting={isExtracting}
+              isImportingProfile={isImportingProfile}
               onExtractedText={(text, fileName) => {
                 setResumeText(text);
                 setUploadedFileName(fileName);
@@ -234,6 +249,8 @@ export function ResumeWorkspace({ authSlot }: ResumeWorkspaceProps) {
               }}
               onExtractErrorChange={setExtractError}
               onExtractingChange={setIsExtracting}
+              onProfileImportingChange={setIsImportingProfile}
+              plan={plan}
               uploadedFileName={uploadedFileName}
             />
 
@@ -282,10 +299,26 @@ export function ResumeWorkspace({ authSlot }: ResumeWorkspaceProps) {
               }}
               uploadedTemplateFileName={uploadedTemplateFileName}
               uploadedTemplateSpec={uploadedTemplateSpec}
+              canUploadTemplate={canUploadTemplate}
+              plan={plan}
               value={templateId}
             />
 
             <ToneSelector onChange={setTone} value={tone} />
+
+            {plan !== "GUEST" ? (
+              <label className="save-history-option">
+                <input
+                  checked={saveGeneration}
+                  onChange={(event) => setSaveGeneration(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>
+                  <strong>Save to resume history</strong>
+                  <small>Keep this result in your Dashboard for later TXT or DOCX download.</small>
+                </span>
+              </label>
+            ) : null}
 
             {error ? <div className="error">{error}</div> : null}
 

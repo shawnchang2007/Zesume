@@ -1,13 +1,17 @@
 "use client";
 
 import { useRef } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   Check,
   FileSearch,
   LayoutTemplate,
   Loader2,
+  LockKeyhole,
 } from "lucide-react";
+import type { AccessPlan } from "@/lib/billing/plan-config";
 import {
   builtInResumeTemplates,
   type ResumeTemplateId,
@@ -21,6 +25,7 @@ type ResumeTemplateSelectorProps = {
   uploadedTemplateFileName: string | null;
   isAnalyzing: boolean;
   analysisError: string | null;
+  canUploadTemplate: boolean;
   onAnalysisStart: () => void;
   onAnalysisSuccess: (
     templateSpec: ResumeTemplateSpec,
@@ -30,6 +35,7 @@ type ResumeTemplateSelectorProps = {
   ) => void;
   onAnalysisError: (message: string) => void;
   onAnalysisEnd: () => void;
+  plan: AccessPlan;
 };
 
 type AnalyzeTemplateResponse =
@@ -57,12 +63,15 @@ export function ResumeTemplateSelector({
   uploadedTemplateFileName,
   isAnalyzing,
   analysisError,
+  canUploadTemplate,
   onAnalysisStart,
   onAnalysisSuccess,
   onAnalysisError,
   onAnalysisEnd,
+  plan,
 }: ResumeTemplateSelectorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   async function analyzeTemplate(file: File) {
     if (file.size > MAX_FILE_SIZE) {
@@ -147,9 +156,14 @@ export function ResumeTemplateSelector({
           aria-checked={value === "uploaded-template"}
           className={`resume-template-card uploaded-template-card ${
             value === "uploaded-template" ? "active" : ""
-          }`}
+          } ${canUploadTemplate ? "" : "locked"}`}
           disabled={isAnalyzing}
           onClick={() => {
+            if (!canUploadTemplate) {
+              router.push("/pricing");
+              return;
+            }
+
             if (uploadedTemplateSpec && value !== "uploaded-template") {
               onChange("uploaded-template");
               return;
@@ -163,6 +177,8 @@ export function ResumeTemplateSelector({
           <span className="resume-template-icon" aria-hidden="true">
             {isAnalyzing ? (
               <Loader2 className="spin" size={16} />
+            ) : !canUploadTemplate ? (
+              <LockKeyhole size={16} />
             ) : value === "uploaded-template" ? (
               <Check size={16} />
             ) : (
@@ -176,7 +192,9 @@ export function ResumeTemplateSelector({
             <small>
               {isAnalyzing
                 ? "Analyzing with DeepSeek..."
-                : uploadedTemplateFileName ?? ".txt / .docx · 2MB max"}
+                : !canUploadTemplate
+                  ? `${plan === "GUEST" ? "Sign in · " : ""}Plus / Pro only`
+                  : uploadedTemplateFileName ?? ".txt / .docx · 2MB max"}
             </small>
             <span>
               {uploadedTemplateSpec?.description ??
@@ -213,6 +231,12 @@ export function ResumeTemplateSelector({
         <div className="status status-error">
           <AlertCircle size={15} aria-hidden="true" />
           {analysisError}
+        </div>
+      ) : null}
+
+      {!canUploadTemplate ? (
+        <div className="template-upgrade-note">
+          Upload Template is available on Plus and Pro. <Link href="/pricing">Compare plans</Link>
         </div>
       ) : null}
     </div>

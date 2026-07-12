@@ -1,10 +1,18 @@
 import { UserMenu } from "@/components/auth/UserMenu";
 import { ResumeWorkspace } from "@/components/resume/ResumeWorkspace";
+import { getCurrentUser } from "@/lib/auth/current-user";
+import { canUseFeature, getCurrentAccess } from "@/lib/billing";
 
-export default function AppPage() {
+export default async function AppPage() {
+  const currentUser = await getCurrentUser();
+  const access = await getCurrentAccess(currentUser);
+
   return (
     <ResumeWorkspace
       authSlot={<UserMenu redirectToAfterSignOut="/app" />}
+      canImportFromProfile={canUseFeature(access, "PROFILE_GENERATION")}
+      canUploadTemplate={canUseFeature(access, "CUSTOM_TEMPLATE")}
+      plan={access.plan}
     />
   );
 }

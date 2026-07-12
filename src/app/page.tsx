@@ -83,7 +83,7 @@ export default function Home() {
             </h3>
             <p>
               Combine a career target with an ATS, project-heavy, research,
-              finance, student, or account-owned custom structure.
+              finance, student, or uploaded custom structure.
             </p>
           </article>
           <article className="feature">

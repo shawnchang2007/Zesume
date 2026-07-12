@@ -3,7 +3,6 @@ import {
   ArrowRight,
   BriefcaseBusiness,
   Clock3,
-  FileStack,
   LockKeyhole,
   Sparkles,
   UploadCloud,
@@ -15,6 +14,7 @@ import { prisma } from "@/lib/db/prisma";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { BasicProfileForm } from "@/components/dashboard/BasicProfileForm";
+import { HistoryDownloadButtons } from "@/components/dashboard/HistoryDownloadButtons";
 import type { BasicProfileInput } from "@/lib/profile/basic-profile";
 
 function planLabel(plan: string) {
@@ -23,7 +23,7 @@ function planLabel(plan: string) {
 
 async function loadDashboardData(userId: string, historyLimit: number) {
   try {
-    const [profile, history, templates] = await Promise.all([
+    const [profile, history] = await Promise.all([
       prisma.userProfile.findUnique({ where: { userId } }),
       prisma.resumeGeneration.findMany({
         where: { userId, isSaved: true, deletedAt: null },
@@ -33,14 +33,9 @@ async function loadDashboardData(userId: string, historyLimit: number) {
           id: true,
           title: true,
           targetTemplate: true,
+          rewrittenResume: true,
           createdAt: true,
         },
-      }),
-      prisma.customTemplate.findMany({
-        where: { userId, status: { not: "DELETED" } },
-        orderBy: { updatedAt: "desc" },
-        take: 5,
-        select: { id: true, name: true, status: true },
       }),
     ]);
 
@@ -62,9 +57,15 @@ async function loadDashboardData(userId: string, historyLimit: number) {
         }
       : null;
 
-    return { profile: basicProfile, history, templates };
+    return {
+      profile: basicProfile,
+      history: history.map(({ rewrittenResume, ...generation }) => ({
+        ...generation,
+        hasDownload: Boolean(rewrittenResume?.trim()),
+      })),
+    };
   } catch {
-    return { profile: null, history: [], templates: [] };
+    return { profile: null, history: [] };
   }
 }
 
@@ -94,8 +95,7 @@ export default async function DashboardPage() {
 
   const data = access.databaseBacked && access.userId
     ? await loadDashboardData(access.userId, access.limits.historyLimit)
-    : { profile: null, history: [], templates: [] };
-  const customTemplatesOpen = canUseFeature(access, "CUSTOM_TEMPLATE");
+    : { profile: null, history: [] };
   const careerOpen = canUseFeature(access, "CAREER_EXPERIENCE");
   const importOpen = canUseFeature(access, "PROFILE_IMPORT");
   const usagePercent = Math.min(
@@ -178,8 +178,14 @@ export default async function DashboardPage() {
               <div className="dashboard-list">
                 {data.history.map((generation) => (
                   <div className="dashboard-list-row" key={generation.id}>
-                    <strong>{generation.title || generation.targetTemplate}</strong>
-                    <span>{generation.createdAt.toLocaleDateString("en-GB")}</span>
+                    <div className="dashboard-history-copy">
+                      <strong>{generation.title || generation.targetTemplate}</strong>
+                      <span>{generation.createdAt.toLocaleDateString("en-GB")}</span>
+                    </div>
+                    <HistoryDownloadButtons
+                      generationId={generation.id}
+                      hasDownload={generation.hasDownload}
+                    />
                   </div>
                 ))}
               </div>
@@ -187,33 +193,6 @@ export default async function DashboardPage() {
               <p className="dashboard-empty">Your generated resumes will appear here.</p>
             )}
             <small>Current plan retains the latest {access.limits.historyLimit}.</small>
-          </section>
-
-          <section className={`dashboard-module ${customTemplatesOpen ? "" : "dashboard-locked"}`}>
-            <div className="dashboard-module-header">
-              <div>
-                <span className="dashboard-kicker">Custom Templates</span>
-                <h2>Your template library</h2>
-              </div>
-              {customTemplatesOpen ? <FileStack size={20} /> : <LockKeyhole className="gold-lock" size={20} />}
-            </div>
-            {customTemplatesOpen ? (
-              data.templates.length ? (
-                <div className="dashboard-list">
-                  {data.templates.map((template) => (
-                    <div className="dashboard-list-row" key={template.id}>
-                      <strong>{template.name}</strong><span>{template.status}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="dashboard-empty">Upload a DOCX template in Resume Studio.</p>
-            ) : (
-              <div className="locked-content">
-                <span className="gold-tier">PLUS</span>
-                <p>Upload and reuse your own resume layouts.</p>
-                <Link className="button button-secondary" href="/pricing">Buy for £3 or upgrade</Link>
-              </div>
-            )}
           </section>
 
           <section className={`dashboard-module ${careerOpen ? "" : "dashboard-locked"}`}>
@@ -241,8 +220,12 @@ export default async function DashboardPage() {
             </div>
             <div className="locked-content">
               <span className="gold-tier">PRO</span>
-              <p>Parse an existing resume into a review draft before saving any experience.</p>
-              {!importOpen ? <Link className="button button-secondary" href="/pricing">Upgrade to Pro</Link> : null}
+              <p>Import your Basic Profile and Career Experience directly into Resume Studio.</p>
+              {importOpen ? (
+                <Link className="button button-secondary" href="/app#import-resume">Import from Profile</Link>
+              ) : (
+                <Link className="button button-secondary" href="/pricing">Upgrade to Pro</Link>
+              )}
             </div>
           </section>
 

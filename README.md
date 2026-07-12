@@ -11,7 +11,7 @@ AI resume rewriting for Gen Z applicants.
 - Choose a separate career target and resume structure template
 - Built-in Classic ATS, SWE Project-Heavy, Quant Research, Finance Spring Week,
   and One-Page Student templates
-- Upload a custom `.txt` or `.docx` resume template and analyze its reusable
+- Plus and Pro users can upload a custom `.txt` or `.docx` resume template and analyze its
   section order, content rules, density, and bullet style with DeepSeek
 - Rewrite a resume with the analyzed uploaded template as its structure and
   style guide while keeping the user's resume as the only source of facts
@@ -22,6 +22,8 @@ AI resume rewriting for Gen Z applicants.
 - Choose Professional, Concise, or Technical tone
 - Download generated results as `.txt`
 - Download generated results as `.docx`
+- Explicitly save generated resumes to account history and download them later
+  as `.txt` or `.docx` from the Dashboard
 - Sign in and sign out with Google through Auth.js
 - Continue using the core rewriter without an account
 
@@ -29,9 +31,9 @@ Not included in v1.1: PDF upload, PDF export, original formatting restoration,
 online resume editing, or complex resume layout.
 
 Uploaded template files are processed in memory and are not saved to the server.
-For authorized users, the sanitized template specification is saved under a
-server-owned `customTemplateId`; rewrite requests never trust client-supplied
-template rules.
+For Plus and Pro users, the sanitized template specification is stored under a
+server-owned `customTemplateId` for up to 24 hours; rewrite requests never trust
+client-supplied template rules. Zesume does not expose a saved template library.
 Template examples are treated as untrusted reference data: names, companies,
 schools, dates, metrics, and other example facts are excluded from the reusable
 template specification.

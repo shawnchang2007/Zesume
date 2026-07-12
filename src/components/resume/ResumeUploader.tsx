@@ -1,6 +1,14 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, Loader2, Upload } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  LockKeyhole,
+  Upload,
+  UserRound,
+} from "lucide-react";
+import type { AccessPlan } from "@/lib/billing/plan-config";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
@@ -22,21 +30,33 @@ type ExtractResponse =
     };
 
 type ResumeUploaderProps = {
+  canImportFromProfile: boolean;
   uploadedFileName: string | null;
   isExtracting: boolean;
+  isImportingProfile: boolean;
   extractError: string | null;
   onExtractedText: (text: string, fileName: string) => void;
   onExtractingChange: (isExtracting: boolean) => void;
+  onProfileImportingChange: (isImporting: boolean) => void;
   onExtractErrorChange: (error: string | null) => void;
+  plan: AccessPlan;
 };
 
+type ProfileImportResponse =
+  | { success: true; data: { resumeText: string; characterCount: number } }
+  | { success: false; error: { code: string; message: string } };
+
 export function ResumeUploader({
+  canImportFromProfile,
   uploadedFileName,
   isExtracting,
+  isImportingProfile,
   extractError,
   onExtractedText,
   onExtractingChange,
+  onProfileImportingChange,
   onExtractErrorChange,
+  plan,
 }: ResumeUploaderProps) {
   async function uploadFile(file: File) {
     onExtractErrorChange(null);
@@ -86,8 +106,32 @@ export function ResumeUploader({
     }
   }
 
+  async function importFromProfile() {
+    if (!canImportFromProfile) return;
+
+    onExtractErrorChange(null);
+    onProfileImportingChange(true);
+
+    try {
+      const response = await fetch("/api/profile/resume-source");
+      const result = (await response.json()) as ProfileImportResponse;
+
+      if (!result.success) {
+        onExtractErrorChange(result.error.message);
+        return;
+      }
+
+      onExtractedText(result.data.resumeText, "Career Profile");
+    } catch {
+      onExtractErrorChange("Could not import your profile. Please try again.");
+    } finally {
+      onProfileImportingChange(false);
+    }
+  }
+
   return (
     <div className="uploader">
+      <div className="import-source-grid" id="import-resume">
       <label className="upload-box">
         <input
           accept=".txt,.docx"
@@ -114,6 +158,31 @@ export function ResumeUploader({
         </span>
         <span className="upload-pill">v1.1</span>
       </label>
+
+      <button
+        className={`upload-box profile-import-box ${canImportFromProfile ? "" : "locked"}`}
+        disabled={!canImportFromProfile || isImportingProfile}
+        onClick={() => void importFromProfile()}
+        type="button"
+      >
+        <span className="upload-icon">
+          {isImportingProfile ? (
+            <Loader2 className="spin" size={18} aria-hidden="true" />
+          ) : canImportFromProfile ? (
+            <UserRound size={18} aria-hidden="true" />
+          ) : (
+            <LockKeyhole size={18} aria-hidden="true" />
+          )}
+        </span>
+        <span className="upload-copy">
+          <strong>{isImportingProfile ? "Importing..." : "Import from Profile"}</strong>
+          <small>
+            {canImportFromProfile ? "Basic Profile + Career Experience" : `${plan === "GUEST" ? "Sign in · " : ""}Pro only`}
+          </small>
+        </span>
+        <span className="upload-pill">PRO</span>
+      </button>
+      </div>
 
       {uploadedFileName && !extractError ? (
         <div className="status status-success">

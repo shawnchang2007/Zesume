@@ -62,13 +62,17 @@ export async function POST(request: Request) {
     if (!canUseFeature(access, "CUSTOM_TEMPLATE")) {
       return errorResponse(
         "FEATURE_NOT_AVAILABLE",
-        "Custom template analysis requires Plus, Pro, or a Template Pass.",
+        "Custom template analysis requires Plus or Pro.",
         403,
       );
     }
 
     const activeTemplateCount = await prisma.customTemplate.count({
-      where: { userId: currentUser.id, status: { in: ["PROCESSING", "READY"] } },
+      where: {
+        userId: currentUser.id,
+        status: { in: ["PROCESSING", "READY"] },
+        expiresAt: { gt: new Date() },
+      },
     });
 
     if (activeTemplateCount >= TEMPLATE_FAIR_USE_LIMITS.maxActiveTemplates) {
@@ -168,7 +172,10 @@ export async function POST(request: Request) {
         parsedSchema: JSON.parse(JSON.stringify(analysis.templateSpec)),
         previewText: templateText.slice(0, 5_000),
         status: "READY",
-        reusable: true,
+        reusable: false,
+        expiresAt: new Date(
+          Date.now() + TEMPLATE_FAIR_USE_LIMITS.templateTokenHours * 60 * 60 * 1_000,
+        ),
       },
       select: { id: true },
     });

@@ -142,13 +142,6 @@ export async function getCurrentAccess(
 }
 
 export function canUseFeature(access: CurrentAccess, feature: GatedFeature) {
-  if (
-    feature === "CUSTOM_TEMPLATE" &&
-    access.entitlements.customTemplatePasses > 0
-  ) {
-    return true;
-  }
-
   return canPlanUseFeature(access.plan, feature);
 }
 

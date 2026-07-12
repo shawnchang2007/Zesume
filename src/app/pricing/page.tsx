@@ -22,7 +22,7 @@ const plans = [
       "50 generations per billing period",
       "Custom template analysis",
       "Up to 10 saved history entries",
-      "Reusable uploaded templates",
+      "Upload your own template per session",
     ],
     highlight: true,
   },

@@ -32,18 +32,24 @@ describe("access controls", () => {
     expect(canGenerate(access({ usage: { ...access().usage, remaining: 0 } }))).toBe(false);
   });
 
-  it("allows a template pass to unlock custom templates", () => {
+  it("does not let a template pass bypass the plan requirement", () => {
     expect(
       canUseFeature(
         access({ entitlements: { customTemplatePasses: 1 } }),
         "CUSTOM_TEMPLATE",
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("keeps custom templates gated by plan", () => {
     expect(canPlanUseFeature("FREE", "CUSTOM_TEMPLATE")).toBe(false);
     expect(canPlanUseFeature("PLUS", "CUSTOM_TEMPLATE")).toBe(true);
     expect(canPlanUseFeature("PRO", "CUSTOM_TEMPLATE")).toBe(true);
+  });
+
+  it("keeps Import from Profile exclusive to Pro", () => {
+    expect(canPlanUseFeature("FREE", "PROFILE_GENERATION")).toBe(false);
+    expect(canPlanUseFeature("PLUS", "PROFILE_GENERATION")).toBe(false);
+    expect(canPlanUseFeature("PRO", "PROFILE_GENERATION")).toBe(true);
   });
 });

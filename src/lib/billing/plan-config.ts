@@ -51,7 +51,7 @@ export const TEMPLATE_FAIR_USE_LIMITS = {
   maxActiveTemplates: 100,
   maxParsesPerMinute: 2,
   maxUploadsPerDay: 20,
-  originalFileRetentionDays: 90,
+  templateTokenHours: 24,
 } as const;
 
 export const GUEST_GENERATION_LIMIT = Number.parseInt(
