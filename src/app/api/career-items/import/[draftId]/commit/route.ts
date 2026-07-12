@@ -11,6 +11,7 @@ export async function POST(
 ) {
   const auth = await requireCareerUser(request, "PROFILE_IMPORT");
   if (auth.error) return auth.error;
+  let selectedCount = 0;
 
   try {
     const body = await readJsonRequest<{ selectedIndexes?: unknown }>(request, 4 * 1024);
@@ -43,6 +44,7 @@ export async function POST(
     const selected = selectedIndexes
       .map((index) => parsed.items[index])
       .filter((item): item is (typeof parsed.items)[number] => Boolean(item));
+    selectedCount = selected.length;
     if (!selected.length) {
       return NextResponse.json(
         { success: false, error: { code: "INVALID_INPUT", message: "Selected Career Items are invalid." } },
@@ -60,6 +62,15 @@ export async function POST(
     return NextResponse.json({ success: true, data: { createdCount: ids.length, ids } });
   } catch (cause) {
     const status = cause instanceof BodyTooLargeError ? 413 : 500;
+    const code =
+      cause && typeof cause === "object" && "code" in cause
+        ? String(cause.code)
+        : "UNKNOWN";
+    console.error(JSON.stringify({
+      event: "career_import_commit_failed",
+      code,
+      selectedCount,
+    }));
     return NextResponse.json(
       { success: false, error: { code: status === 413 ? "REQUEST_TOO_LARGE" : "IMPORT_COMMIT_FAILED", message: status === 413 ? "Request is too large." : "Could not save imported Career Items." } },
       { status },

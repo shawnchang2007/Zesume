@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import type { CareerItemInput } from "./types";
 
@@ -13,6 +14,10 @@ function asDate(value: string | null) {
 
 function normalizedSkill(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function uniqueSkills(skills: string[]) {
+  return [...new Map(skills.map((name) => [normalizedSkill(name), name])).entries()];
 }
 
 function scalarData(input: CareerItemInput) {
@@ -47,10 +52,10 @@ async function attachRelations(
     });
   }
 
-  for (const name of input.skills) {
+  for (const [normalizedName, name] of uniqueSkills(input.skills)) {
     const skill = await transaction.skill.upsert({
-      where: { normalizedName: normalizedSkill(name) },
-      create: { name, normalizedName: normalizedSkill(name) },
+      where: { normalizedName },
+      create: { name, normalizedName },
       update: { name },
       select: { id: true },
     });
@@ -122,27 +127,72 @@ export function commitCareerImportDraft(
   draftId: string,
   inputs: CareerItemInput[],
 ) {
-  return prisma.$transaction(async (transaction) => {
-    const claimed = await transaction.resumeImportDraft.updateMany({
-      where: {
-        id: draftId,
-        userId,
-        status: "REVIEW",
-        expiresAt: { gt: new Date() },
-      },
-      data: { status: "COMMITTED" },
-    });
-    if (!claimed.count) return null;
-
-    const ids: string[] = [];
-    for (const input of inputs) {
-      const item = await transaction.careerItem.create({
-        data: { userId, ...scalarData(input) },
-        select: { id: true },
+  return prisma.$transaction(
+    async (transaction) => {
+      const claimed = await transaction.resumeImportDraft.updateMany({
+        where: {
+          id: draftId,
+          userId,
+          status: "REVIEW",
+          expiresAt: { gt: new Date() },
+        },
+        data: { status: "COMMITTED" },
       });
-      await attachRelations(transaction, item.id, input);
-      ids.push(item.id);
-    }
-    return ids;
-  });
+      if (!claimed.count) return null;
+
+      const ids = inputs.map(() => randomUUID());
+      await transaction.careerItem.createMany({
+        data: inputs.map((input, index) => ({
+          id: ids[index],
+          userId,
+          ...scalarData(input),
+        })),
+      });
+
+      const bullets = inputs.flatMap((input, itemIndex) =>
+        input.bullets.map((content, displayOrder) => ({
+          careerItemId: ids[itemIndex],
+          content,
+          displayOrder,
+          source: "AI_IMPORT",
+        })),
+      );
+      if (bullets.length) {
+        await transaction.careerItemBullet.createMany({ data: bullets });
+      }
+
+      const skillNames = new Map(
+        inputs.flatMap((input) => uniqueSkills(input.skills)),
+      );
+      if (skillNames.size) {
+        await transaction.skill.createMany({
+          data: [...skillNames].map(([normalizedName, name]) => ({
+            name,
+            normalizedName,
+          })),
+          skipDuplicates: true,
+        });
+        const skills = await transaction.skill.findMany({
+          where: { normalizedName: { in: [...skillNames.keys()] } },
+          select: { id: true, normalizedName: true },
+        });
+        const skillIds = new Map(skills.map((skill) => [skill.normalizedName, skill.id]));
+        const links = inputs.flatMap((input, itemIndex) =>
+          uniqueSkills(input.skills).flatMap(([normalizedName]) => {
+            const skillId = skillIds.get(normalizedName);
+            return skillId ? [{ careerItemId: ids[itemIndex], skillId }] : [];
+          }),
+        );
+        if (links.length) {
+          await transaction.careerItemSkill.createMany({
+            data: links,
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      return ids;
+    },
+    { maxWait: 10_000, timeout: 30_000 },
+  );
 }

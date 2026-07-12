@@ -249,6 +249,8 @@ export function CareerMemoryManager({ initialItems }: { initialItems: CareerItem
         </label>
       </section>
 
+      {status ? <div className="memory-operation-status">{status}</div> : null}
+
       {draft ? (
         <section className="memory-draft-band">
           <div className="memory-section-heading">
@@ -322,7 +324,6 @@ export function CareerMemoryManager({ initialItems }: { initialItems: CareerItem
           <div className="dashboard-form-actions">
             <button className="button button-primary" disabled={isSaving} onClick={() => void saveItem()} type="button">{isSaving ? <Loader2 className="spin" size={16} /> : <Save size={16} />}{isSaving ? "Saving" : "Save item"}</button>
             {editingId ? <button className="button button-secondary" onClick={() => startNew()} type="button">Cancel</button> : null}
-            {status ? <span className="dashboard-save-status">{status}</span> : null}
           </div>
         </section>
       </div>
