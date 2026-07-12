@@ -20,8 +20,11 @@ function createPrismaClient() {
 export const getPrismaClient = cache(createPrismaClient);
 
 export const prisma = new Proxy({} as PrismaClient, {
-  get(_target, property, receiver) {
-    return Reflect.get(getPrismaClient(), property, receiver);
+  get(_target, property, _receiver) {
+    const client = getPrismaClient();
+    const value = Reflect.get(client, property, client);
+
+    return typeof value === "function" ? value.bind(client) : value;
   },
 });
 
