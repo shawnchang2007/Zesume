@@ -697,7 +697,7 @@ button:disabled {
 }
 
 .upload-box.locked {
-  cursor: not-allowed;
+  cursor: pointer;
 }
 
 .uploaded-template-card.locked {
@@ -925,6 +925,40 @@ button:disabled {
 .template-upgrade-note a {
   color: var(--blue);
   font-weight: 700;
+}
+
+.premium-feature,
+.premium-feature.locked,
+.premium-feature.active {
+  background: linear-gradient(135deg, #fff8dc 0, #fffdf5 68%, #ffffff 100%);
+  border-color: #e5c04f;
+  opacity: 1;
+}
+
+.premium-feature .upload-icon,
+.premium-feature .resume-template-icon {
+  background: #fff8dc;
+  border-color: #e5c04f;
+  box-shadow: none;
+  color: #8a6508;
+}
+
+.premium-feature .upload-pill {
+  background: #fff8dc;
+  border-color: #e5c04f;
+  color: #72530a;
+}
+
+.premium-feature:hover,
+.premium-feature.locked:hover {
+  background: #fff9e8;
+  border-color: #c89c17;
+  box-shadow: 0 10px 26px rgba(183, 138, 11, 0.1);
+  transform: translateY(-1px);
+}
+
+.premium-feature:focus-visible {
+  outline-color: rgba(200, 156, 23, 0.28);
 }
 
 .template-file-input {

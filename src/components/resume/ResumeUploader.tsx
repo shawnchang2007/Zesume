@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   CheckCircle2,
@@ -58,6 +59,8 @@ export function ResumeUploader({
   onExtractErrorChange,
   plan,
 }: ResumeUploaderProps) {
+  const router = useRouter();
+
   async function uploadFile(file: File) {
     onExtractErrorChange(null);
 
@@ -160,9 +163,16 @@ export function ResumeUploader({
       </label>
 
       <button
-        className={`upload-box profile-import-box ${canImportFromProfile ? "" : "locked"}`}
-        disabled={!canImportFromProfile || isImportingProfile}
-        onClick={() => void importFromProfile()}
+        className={`upload-box profile-import-box premium-feature ${canImportFromProfile ? "" : "locked"}`}
+        disabled={isImportingProfile}
+        onClick={() => {
+          if (!canImportFromProfile) {
+            router.push("/pricing");
+            return;
+          }
+
+          void importFromProfile();
+        }}
         type="button"
       >
         <span className="upload-icon">

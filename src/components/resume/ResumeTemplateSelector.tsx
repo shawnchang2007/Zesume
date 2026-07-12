@@ -154,7 +154,7 @@ export function ResumeTemplateSelector({
 
         <button
           aria-checked={value === "uploaded-template"}
-          className={`resume-template-card uploaded-template-card ${
+          className={`resume-template-card uploaded-template-card premium-feature ${
             value === "uploaded-template" ? "active" : ""
           } ${canUploadTemplate ? "" : "locked"}`}
           disabled={isAnalyzing}
