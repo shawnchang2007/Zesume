@@ -3,9 +3,11 @@ import { LayoutDashboard, UserRound } from "lucide-react";
 import { auth } from "@/auth";
 import { SignInButton } from "./SignInButton";
 import { SignOutButton } from "./SignOutButton";
+import type { CurrentUser } from "@/lib/auth/current-user";
 
 type UserMenuProps = {
   redirectToAfterSignOut?: string;
+  user?: CurrentUser | null;
 };
 
 function userLabel(name?: string | null, email?: string | null) {
@@ -14,9 +16,9 @@ function userLabel(name?: string | null, email?: string | null) {
 
 export async function UserMenu({
   redirectToAfterSignOut = "/",
+  user: providedUser,
 }: UserMenuProps) {
-  const session = await auth();
-  const user = session?.user;
+  const user = providedUser === undefined ? (await auth())?.user : providedUser;
 
   if (!user?.email) {
     return <SignInButton />;

@@ -9,7 +9,12 @@ function createPrismaClient() {
     throw new Error("DATABASE_URL is required when the database runtime is enabled.");
   }
 
-  const adapter = new PrismaPg({ connectionString, maxUses: 1 });
+  const adapter = new PrismaPg({
+    connectionString,
+    max: 1,
+    maxUses: 100,
+    idleTimeoutMillis: 5_000,
+  });
 
   return new PrismaClient({
     adapter,

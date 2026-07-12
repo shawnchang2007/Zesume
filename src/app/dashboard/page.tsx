@@ -113,7 +113,7 @@ export default async function DashboardPage() {
         <nav className="nav-links" aria-label="Dashboard navigation">
           <Link href="/app">Resume Studio</Link>
           <Link href="/pricing">Pricing</Link>
-          <UserMenu redirectToAfterSignOut="/" />
+          <UserMenu redirectToAfterSignOut="/" user={currentUser} />
         </nav>
       </header>
 

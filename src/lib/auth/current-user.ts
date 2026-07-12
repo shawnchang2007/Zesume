@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { cache } from "react";
 
 export type CurrentUser = {
   id?: string;
@@ -7,7 +8,7 @@ export type CurrentUser = {
   image?: string | null;
 };
 
-export async function getCurrentUser(_request?: Request): Promise<CurrentUser | null> {
+async function resolveCurrentUser(): Promise<CurrentUser | null> {
   const session = await auth();
 
   if (!session?.user?.email) {
@@ -22,4 +23,10 @@ export async function getCurrentUser(_request?: Request): Promise<CurrentUser | 
   };
 
   return currentUser;
+}
+
+const getCachedCurrentUser = cache(resolveCurrentUser);
+
+export function getCurrentUser(_request?: Request) {
+  return getCachedCurrentUser();
 }

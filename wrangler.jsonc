@@ -25,6 +25,7 @@
     "AUTH_GOOGLE_ID": "870373804988-l930cjtoag0khuu4u1s3kjg75ffpr1qo.apps.googleusercontent.com",
     "AI_PROVIDER": "deepseek",
     "DEEPSEEK_MODEL": "deepseek-v4-flash",
+    "DEEPSEEK_THINKING": "disabled",
     "AI_REQUEST_TIMEOUT_MS": "45000",
     "DATABASE_RUNTIME_ENABLED": "true",
     "AUTH_DATABASE_ENABLED": "true"

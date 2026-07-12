@@ -2,6 +2,10 @@
 
 AI resume rewriting for Gen Z applicants.
 
+Production uses `deepseek-v4-flash` in non-thinking mode with bounded JSON
+output. This keeps resume transformation responsive while preserving the
+existing fact-safety and validation rules.
+
 ## v1.1 Features
 
 - Paste resume text directly in `/app`

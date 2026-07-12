@@ -19,6 +19,10 @@ import { parseCareerImportOutput } from "@/lib/career-items/import";
 
 const MAX_AI_RESPONSE_BYTES = 1024 * 1024;
 
+function thinkingMode() {
+  return process.env.DEEPSEEK_THINKING === "enabled" ? "enabled" : "disabled";
+}
+
 type DeepSeekResponse = {
   choices?: Array<{
     message?: {
@@ -57,6 +61,8 @@ export async function rewriteWithDeepSeek(
             },
           ],
           response_format: { type: "json_object" },
+          thinking: { type: thinkingMode() },
+          max_tokens: 6_000,
           stream: false,
           temperature: 0.4,
         }),
@@ -131,6 +137,8 @@ export async function analyzeTemplateWithDeepSeek(
             },
           ],
           response_format: { type: "json_object" },
+          thinking: { type: thinkingMode() },
+          max_tokens: 2_500,
           stream: false,
           temperature: 0.1,
         }),
@@ -200,6 +208,8 @@ export async function analyzeCareerImportWithDeepSeek(
         model,
         messages: [{ role: "user", content: buildCareerImportPrompt(input) }],
         response_format: { type: "json_object" },
+        thinking: { type: thinkingMode() },
+        max_tokens: 8_000,
         stream: false,
         temperature: 0.1,
       }),

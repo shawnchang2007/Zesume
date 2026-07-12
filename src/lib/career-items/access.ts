@@ -17,7 +17,7 @@ export async function requireCareerUser(
   if (!isDatabaseConfigured()) {
     return { error: error("DATABASE_UNAVAILABLE", "Career Memory is temporarily unavailable.", 503) };
   }
-  const access = await getCurrentAccess(user);
+  const access = await getCurrentAccess(user, { includeUsage: false });
   if (!access.databaseBacked) {
     return { error: error("DATABASE_UNAVAILABLE", "Account access could not be verified.", 503) };
   }

@@ -83,6 +83,7 @@ export function freeAccess(userId?: string | null) {
 
 export async function getCurrentAccess(
   currentUser: CurrentUser | null,
+  options?: { includeUsage?: boolean },
 ): Promise<CurrentAccess> {
   if (!currentUser) return guestAccess();
   if (!currentUser.id || !isDatabaseConfigured()) return freeAccess(currentUser.id);
@@ -105,25 +106,15 @@ export async function getCurrentAccess(
         }
       : freePeriod(now);
     const plan: AccessPlan = subscription?.plan ?? "FREE";
-    const [used, passAggregate] = await Promise.all([
-      prisma.usageEvent.count({
+    const used = options?.includeUsage === false
+      ? 0
+      : await prisma.usageEvent.count({
         where: {
           userId: currentUser.id,
           type: "RESUME_GENERATION",
           createdAt: { gte: period.start, lt: period.end },
         },
-      }),
-      prisma.entitlement.aggregate({
-        where: {
-          userId: currentUser.id,
-          type: "CUSTOM_TEMPLATE_PASS",
-          status: "ACTIVE",
-          remainingQuantity: { gt: 0 },
-          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-        },
-        _sum: { remainingQuantity: true },
-      }),
-    ]);
+      });
 
     return buildAccess({
       authenticated: true,
@@ -132,7 +123,7 @@ export async function getCurrentAccess(
       used,
       periodStart: period.start,
       periodEnd: period.end,
-      customTemplatePasses: passAggregate._sum.remainingQuantity ?? 0,
+      customTemplatePasses: 0,
       cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd,
       databaseBacked: true,
     });

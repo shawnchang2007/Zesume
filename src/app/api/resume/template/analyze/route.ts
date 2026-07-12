@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const access = await getCurrentAccess(currentUser);
+    const access = await getCurrentAccess(currentUser, { includeUsage: false });
 
     if (!access.databaseBacked) {
       return errorResponse(

@@ -18,7 +18,7 @@ export async function GET() {
     return errorResponse("UNAUTHORIZED", "Please sign in first.", 401);
   }
 
-  const access = await getCurrentAccess(currentUser);
+  const access = await getCurrentAccess(currentUser, { includeUsage: false });
 
   if (!access.databaseBacked) {
     return errorResponse(
