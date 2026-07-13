@@ -46,7 +46,12 @@ export const metadata: Metadata = {
     images: ["/brand/zesume-social-card.png"],
   },
   icons: {
-    icon: [{ url: "/icon.png", sizes: "512x512", type: "image/png" }],
+    icon: [
+      { url: "/favicon.ico", type: "image/x-icon" },
+      { url: "/favicon-48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icon.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
   robots: {
