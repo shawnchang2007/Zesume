@@ -13,6 +13,7 @@ import { canUseFeature, getCurrentAccess } from "@/lib/billing";
 import { prisma } from "@/lib/db/prisma";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { UserMenu } from "@/components/auth/UserMenu";
+import { BrandMark } from "@/components/BrandMark";
 import { BasicProfileForm } from "@/components/dashboard/BasicProfileForm";
 import { HistoryDownloadButtons } from "@/components/dashboard/HistoryDownloadButtons";
 import type { BasicProfileInput } from "@/lib/profile/basic-profile";
@@ -83,7 +84,7 @@ export default async function DashboardPage({
       <main className="dashboard-shell">
         <header className="nav">
           <Link className="brand" href="/">
-            <span className="brand-mark">Z</span>
+            <BrandMark priority />
             <span>Zesume</span>
           </Link>
         </header>
@@ -112,7 +113,7 @@ export default async function DashboardPage({
     <main className="dashboard-shell">
       <header className="nav dashboard-nav">
         <Link className="brand" href="/">
-          <span className="brand-mark">Z</span>
+          <BrandMark priority />
           <span>Zesume</span>
         </Link>
         <nav className="nav-links" aria-label="Dashboard navigation">

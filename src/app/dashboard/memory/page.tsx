@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { UserMenu } from "@/components/auth/UserMenu";
+import { BrandMark } from "@/components/BrandMark";
 import { CareerMemoryManager } from "@/components/dashboard/CareerMemoryManager";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { canUseFeature, getCurrentAccess } from "@/lib/billing";
@@ -22,7 +23,7 @@ export default async function CareerMemoryPage() {
   return (
     <main className="dashboard-shell">
       <header className="nav dashboard-nav">
-        <Link className="brand" href="/"><span className="brand-mark">Z</span><span>Zesume</span></Link>
+        <Link className="brand" href="/"><BrandMark priority /><span>Zesume</span></Link>
         <nav className="nav-links"><Link href="/dashboard"><ArrowLeft size={16} /> Dashboard</Link><Link href="/app">Resume Studio</Link><UserMenu redirectToAfterSignOut="/" user={user} /></nav>
       </header>
       <section className="dashboard-main memory-page">

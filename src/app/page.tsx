@@ -1,10 +1,56 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpenCheck, CheckCircle2, Sparkles } from "lucide-react";
+import { Footer } from "@/components/Footer";
 import { Nav } from "@/components/Nav";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://zesume.xyz/#website",
+      url: "https://zesume.xyz/",
+      name: "Zesume",
+      alternateName: "Zesume Resume Rewriter",
+      description: "Fact-safe AI resume rewriting for students and early-career applicants.",
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://zesume.xyz/#organization",
+      name: "Zesume",
+      url: "https://zesume.xyz/",
+      logo: "https://zesume.xyz/brand/zesume-mark.png",
+    },
+    {
+      "@type": "WebApplication",
+      name: "Zesume",
+      url: "https://zesume.xyz/app",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Any",
+      browserRequirements: "Requires JavaScript and a modern web browser.",
+      description:
+        "AI resume rewriting with career targets, resume templates, fact-safety checks, and TXT or DOCX export.",
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+      },
+    },
+  ],
+};
 
 export default function Home() {
   return (
     <main className="shell">
+      <script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        type="application/ld+json"
+      />
       <Nav />
       <section className="hero">
         <div className="hero-grid">
@@ -106,6 +152,27 @@ export default function Home() {
           </article>
         </div>
       </section>
+
+      <section className="home-resource-band">
+        <div>
+          <span className="home-resource-icon" aria-hidden="true">
+            <BookOpenCheck size={22} />
+          </span>
+          <div>
+            <p className="eyebrow">Independent guidance</p>
+            <h2>Review AI output against trusted career resources.</h2>
+            <p>
+              Compare your draft with university careers guidance from Harvard,
+              Imperial College London, Prospects, and LinkedIn.
+            </p>
+          </div>
+        </div>
+        <Link className="button button-secondary" href="/resources">
+          Browse Resources
+          <ArrowRight size={16} aria-hidden="true" />
+        </Link>
+      </section>
+      <Footer />
     </main>
   );
 }

@@ -12,6 +12,7 @@ import {
   Wand2,
 } from "lucide-react";
 import { CareerTargetSelector } from "@/components/resume/CareerTargetSelector";
+import { BrandMark } from "@/components/BrandMark";
 import { GeneratedOutput } from "@/components/resume/GeneratedOutput";
 import { ResumeInput } from "@/components/resume/ResumeInput";
 import { ResumeTemplateSelector } from "@/components/resume/ResumeTemplateSelector";
@@ -186,7 +187,7 @@ export function ResumeWorkspace({
     <main className="app-shell">
       <header className="nav app-nav">
         <Link className="brand" href="/">
-          <span className="brand-mark">Z</span>
+          <BrandMark priority />
           <span>Zesume</span>
         </Link>
         <nav className="nav-links" aria-label="App navigation">

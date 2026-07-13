@@ -1,9 +1,19 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, XCircle } from "lucide-react";
+import { Footer } from "@/components/Footer";
 import { Nav } from "@/components/Nav";
 import { PayPalPurchaseButton } from "@/components/billing/PayPalPurchaseButton";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getCurrentAccess } from "@/lib/billing";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Compare Zesume Free, Plus, and Pro access for AI resume rewriting, custom templates, Career Memory, and saved history.",
+  alternates: { canonical: "/pricing" },
+  openGraph: { title: "Zesume Pricing", url: "/pricing" },
+};
 
 const plans = [
   {
@@ -114,6 +124,7 @@ export default async function PricingPage({
           </Link>
         </p>
       </section>
+      <Footer />
     </main>
   );
 }

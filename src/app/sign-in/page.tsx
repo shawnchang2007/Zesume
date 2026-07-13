@@ -1,8 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, ShieldCheck } from "lucide-react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { SignInButton } from "@/components/auth/SignInButton";
+import { BrandMark } from "@/components/BrandMark";
+
+export const metadata: Metadata = {
+  title: "Sign In",
+  robots: { index: false, follow: false },
+};
 
 export default async function SignInPage() {
   const session = await auth();
@@ -15,7 +22,7 @@ export default async function SignInPage() {
     <main className="auth-page">
       <header className="auth-header">
         <Link className="brand" href="/">
-          <span className="brand-mark">Z</span>
+          <BrandMark priority />
           <span>Zesume</span>
         </Link>
         <Link className="auth-back" href="/app">
