@@ -31,6 +31,7 @@ try {
     "prisma/migrations/20260710_memory_foundation/migration.sql",
     "prisma/migrations/20260711_v2_access_foundation/migration.sql",
     "prisma/migrations/20260712_career_memory_management/migration.sql",
+    "prisma/migrations/20260713_paypal_one_time_checkout/migration.sql",
   ]) {
     await client.query(await readFile(file, "utf8"));
   }

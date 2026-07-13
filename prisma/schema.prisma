@@ -191,6 +191,9 @@ model Subscription {
   provider               String
   providerCustomerId     String?
   providerSubscriptionId String?            @unique
+  providerPaymentId      String?            @unique
+  amountCents            Int?
+  currency               String?
   currentPeriodStart     DateTime?
   currentPeriodEnd       DateTime?
   cancelAtPeriodEnd      Boolean            @default(false)
@@ -448,4 +451,17 @@ model BillingWebhookEvent {
   processedAt DateTime @default(now())
 
   @@map("billing_webhook_events")
+}
+
+model BillingProviderConfig {
+  id          String   @id @default(cuid())
+  provider    String
+  environment String
+  webhookId   String
+  webhookUrl  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([provider, environment])
+  @@map("billing_provider_configs")
 }

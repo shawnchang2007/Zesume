@@ -69,7 +69,12 @@ async function loadDashboardData(userId: string, historyLimit: number) {
   }
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ payment?: string; plan?: string }>;
+}) {
+  const params = await searchParams;
   const currentUser = await getCurrentUser();
   const access = await getCurrentAccess(currentUser);
 
@@ -126,6 +131,12 @@ export default async function DashboardPage() {
           </div>
           <div className="dashboard-plan-badge">{planLabel(access.plan)}</div>
         </div>
+
+        {params.payment === "success" ? (
+          <div className="dashboard-notice dashboard-payment-success">
+            Payment confirmed. Your {params.plan === "pro" ? "Pro" : "Plus"} access is ready for the next 30 days.
+          </div>
+        ) : null}
 
         {!access.databaseBacked ? (
           <div className="dashboard-notice">

@@ -1540,13 +1540,17 @@ button:disabled {
   background: white;
   border: 1px solid var(--line);
   border-radius: 8px;
+  display: flex;
+  flex-direction: column;
   padding: 22px;
 }
 
 .price-card.highlight {
-  border-color: #9fe8ca;
+  border-color: #d8b032;
   box-shadow: var(--shadow);
 }
+
+.price-card.paid { border-top: 4px solid #e2b92f; padding-top: 19px; }
 
 .price {
   font-size: 38px;
@@ -1556,9 +1560,22 @@ button:disabled {
 
 .price-card ul {
   color: var(--muted);
+  flex: 1;
   line-height: 1.7;
   padding-left: 20px;
 }
+
+.pricing-purchase { margin-top: 18px; }
+.pricing-card-button { min-width: 100%; width: 100%; }
+.button-gold { background: var(--yellow); border-color: #d8ad1f; color: var(--ink); font-weight: 800; }
+.button-gold:hover { background: #ffda5c; }
+.pricing-error { color: #a52828; font-size: 12px; line-height: 1.4; margin: 9px 0 0; }
+.pricing-status { align-items: center; background: white; border: 1px solid var(--line); border-left: 4px solid var(--blue); display: flex; gap: 9px; margin: 22px 0; padding: 12px 14px; }
+.pricing-status.error { border-left-color: #c94343; color: #812828; }
+.pricing-status.neutral { color: var(--muted); }
+.dashboard-payment-success { border-left: 4px solid var(--mint-strong); color: #145c47; margin-bottom: 20px; }
+.spin { animation: spin 800ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 900px) {
   .hero-grid,

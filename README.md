@@ -131,13 +131,13 @@ The v2 Phase 1 foundation adds:
 - centralized plan rules in `src/lib/billing/plan-config.ts`
 - server-side access resolution in `src/lib/billing/access.ts`
 - `GET /api/billing/access`
+- PayPal Orders v2 one-time checkout for 30-day Plus ($5 USD) and Pro ($10 USD) access
+- verified PayPal webhooks with automatic Sandbox/Live webhook registration
 - authenticated `GET/PATCH /api/profile`
 - one permission-aware `/dashboard` for Free, Plus, and Pro
 
-The generated PostgreSQL migration is stored in
-`prisma/migrations/20260711_v2_access_foundation`. Do not run it against an
-existing database without reviewing whether that database already contains the
-legacy Phase 1 memory tables.
+PostgreSQL migrations are stored in `prisma/migrations`. Review new migrations
+before applying them to an existing database.
 
 `DATABASE_RUNTIME_ENABLED` controls business persistence and
 `AUTH_DATABASE_ENABLED` independently controls the Auth.js Prisma Adapter. Both
@@ -155,5 +155,5 @@ PRODUCTION_BASE_URL=https://zesume.xyz npm run test:smoke
 ```
 
 The database integration script refuses to run unless the database name contains
-`test` and its public schema is empty. It runs both migrations and CRUD checks in
+`test` and its public schema is empty. It runs all migrations and CRUD checks in
 a transaction that is rolled back.

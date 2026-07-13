@@ -95,7 +95,10 @@ export async function getCurrentAccess(
       where: {
         userId: currentUser.id,
         status: { in: ["ACTIVE", "TRIALING"] },
-        OR: [{ currentPeriodEnd: null }, { currentPeriodEnd: { gt: now } }],
+        AND: [
+          { OR: [{ currentPeriodStart: null }, { currentPeriodStart: { lte: now } }] },
+          { OR: [{ currentPeriodEnd: null }, { currentPeriodEnd: { gt: now } }] },
+        ],
       },
       orderBy: [{ plan: "desc" }, { updatedAt: "desc" }],
     });

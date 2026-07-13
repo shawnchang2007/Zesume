@@ -28,7 +28,8 @@
     "DEEPSEEK_THINKING": "disabled",
     "AI_REQUEST_TIMEOUT_MS": "45000",
     "DATABASE_RUNTIME_ENABLED": "true",
-    "AUTH_DATABASE_ENABLED": "true"
+    "AUTH_DATABASE_ENABLED": "true",
+    "PAYPAL_ENVIRONMENT": "sandbox"
   },
   "ratelimits": [
     {
