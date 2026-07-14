@@ -17,7 +17,7 @@ const structuredData = {
       url: "https://zesume.xyz/",
       name: "Zesume",
       alternateName: "Zesume Resume Rewriter",
-      description: "Fact-safe AI resume rewriting for students and early-career applicants.",
+      description: "A free AI resume and CV builder for students and early-career applicants.",
     },
     {
       "@type": "Organization",
@@ -34,7 +34,7 @@ const structuredData = {
       operatingSystem: "Any",
       browserRequirements: "Requires JavaScript and a modern web browser.",
       description:
-        "AI resume rewriting with career targets, resume templates, fact-safety checks, and TXT or DOCX export.",
+        "Free AI resume and CV building with career targets, templates, fact-safety checks, and TXT or DOCX export.",
       offers: {
         "@type": "Offer",
         price: "0",
@@ -57,13 +57,13 @@ export default function Home() {
           <div>
             <div className="eyebrow">
               <Sparkles size={16} aria-hidden="true" />
-              Gen Z Resume Rewriter
+              Free AI Resume &amp; CV Builder
             </div>
             <h1>Zesume</h1>
             <p className="hero-copy">
-              AI resume rewriting for Gen Z applicants. Import your resume,
-              choose a career direction and structure, then export a tailored
-              version for SWE, Quant, Finance, or general applications.
+              Start free with fact-safe AI resume and CV rewriting. Import your
+              experience, choose a career direction and structure, then export
+              a tailored version for SWE, Quant, Finance, or general applications.
             </p>
             <div className="hero-actions">
               <Link className="button button-primary" href="/app">
@@ -116,7 +116,7 @@ export default function Home() {
       </section>
 
       <section className="section">
-        <h2 className="section-title">Turn one resume into career-ready versions.</h2>
+        <h2 className="section-title">Turn one resume or CV into career-ready versions.</h2>
         <p className="section-copy">
           Paste or upload a resume, choose the target and structure, then review
           and export the result. Signed-in users can manage their profile and

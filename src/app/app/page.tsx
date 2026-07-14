@@ -5,11 +5,11 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { canUseFeature, getCurrentAccess } from "@/lib/billing";
 
 export const metadata: Metadata = {
-  title: "AI Resume Rewriter",
+  title: "Free AI Resume & CV Builder",
   description:
-    "Import a resume, choose a career target and structure, then generate and export a fact-safe tailored version.",
+    "Start free: import a resume or CV, choose a career target and structure, then generate and export a fact-safe tailored version.",
   alternates: { canonical: "/app" },
-  openGraph: { title: "AI Resume Rewriter | Zesume", url: "/app" },
+  openGraph: { title: "Free AI Resume & CV Builder | Zesume", url: "/app" },
 };
 
 export default async function AppPage() {

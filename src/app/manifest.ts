@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Zesume AI Resume Rewriter",
+    name: "Zesume Free AI Resume & CV Builder",
     short_name: "Zesume",
     description:
-      "Fact-safe AI resume rewriting for students and early-career applicants.",
+      "Start free with fact-safe AI resume and CV building for students and early-career applicants.",
     start_url: "/app",
     display: "standalone",
     background_color: "#fbfcfd",

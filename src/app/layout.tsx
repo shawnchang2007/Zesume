@@ -5,12 +5,14 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://zesume.xyz"),
   applicationName: "Zesume",
   title: {
-    default: "Zesume: AI Resume Rewriter for Students",
+    default: "Free AI Resume & CV Builder for Students | Zesume",
     template: "%s | Zesume",
   },
   description:
-    "Rewrite student resumes for SWE, Quant, Finance, and general applications with fact-safe AI, career-specific templates, and DOCX export.",
+    "Start free with Zesume, an AI resume and CV builder for students. Tailor applications for SWE, Quant, Finance, and general roles, then export to DOCX.",
   keywords: [
+    "free AI resume builder",
+    "AI CV builder",
     "AI resume rewriter",
     "student resume builder",
     "SWE resume",
@@ -25,9 +27,9 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     siteName: "Zesume",
-    title: "Zesume: AI Resume Rewriter for Students",
+    title: "Free AI Resume & CV Builder for Students | Zesume",
     description:
-      "Fact-safe AI resume rewriting for SWE, Quant, Finance, and early-career applications.",
+      "Start free and build a fact-safe, career-focused resume or CV for SWE, Quant, Finance, and early-career applications.",
     url: "/",
     images: [
       {
@@ -40,9 +42,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Zesume: AI Resume Rewriter for Students",
+    title: "Free AI Resume & CV Builder for Students | Zesume",
     description:
-      "Fact-safe, career-focused resume rewriting for university students.",
+      "Start free with fact-safe AI resume and CV building for university students.",
     images: ["/brand/zesume-social-card.png"],
   },
   icons: {
