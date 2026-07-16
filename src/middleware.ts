@@ -9,8 +9,9 @@ export function middleware(request: NextRequest) {
     forwardedProtocol === "http" ||
     cloudflareVisitor?.includes('"scheme":"http"');
   const isWww = request.nextUrl.hostname === "www.zesume.xyz";
+  const isProductionHost = isWww || request.nextUrl.hostname === "zesume.xyz";
 
-  if (!isHttp && !isWww) {
+  if (!isProductionHost || (!isHttp && !isWww)) {
     return NextResponse.next();
   }
 

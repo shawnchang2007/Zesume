@@ -36,6 +36,12 @@ a {
   text-decoration: none;
 }
 
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid rgba(43, 111, 214, 0.28);
+  outline-offset: 3px;
+}
+
 button,
 textarea {
   font: inherit;
@@ -79,7 +85,12 @@ button:disabled {
   height: 34px;
   object-fit: contain;
   padding: 3px;
+  transition: transform 180ms ease;
   width: 34px;
+}
+
+.brand:hover .brand-logo {
+  transform: scale(1.06);
 }
 
 .nav-links {
@@ -88,6 +99,29 @@ button:disabled {
   gap: 18px;
   color: var(--muted);
   font-size: 14px;
+}
+
+.nav-links > a:not(.button) {
+  position: relative;
+}
+
+.nav-links > a:not(.button)::after {
+  background: var(--mint-strong);
+  bottom: -6px;
+  content: "";
+  height: 2px;
+  left: 0;
+  position: absolute;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 180ms ease;
+  width: 100%;
+}
+
+.nav-links > a:not(.button):hover::after,
+.nav-links > a:not(.button):focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left;
 }
 
 .nav-links form {
@@ -311,6 +345,23 @@ button:disabled {
   transform: translateY(-1px);
 }
 
+.button:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.button svg {
+  transition: transform 180ms ease;
+}
+
+.button:hover svg:last-child {
+  transform: translateX(2px);
+}
+
+.button .spin,
+.button:hover .spin {
+  transform: none;
+}
+
 .button:disabled:hover {
   transform: none;
 }
@@ -505,6 +556,16 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 20px;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.feature:hover {
+  border-color: #b9d9ca;
+  box-shadow: 0 16px 36px rgba(17, 24, 39, 0.08);
+  transform: translateY(-3px);
 }
 
 .feature h3 {
@@ -689,6 +750,16 @@ button:disabled {
   flex-direction: column;
   min-height: 280px;
   padding: 22px;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.resource-card:hover {
+  border-color: #b9d9ca;
+  box-shadow: 0 18px 42px rgba(17, 24, 39, 0.08);
+  transform: translateY(-3px);
 }
 
 .resource-card .resource-icon {
@@ -726,6 +797,14 @@ button:disabled {
   gap: 7px;
   margin-top: auto;
   padding-top: 20px;
+}
+
+.resource-link svg {
+  transition: transform 180ms ease;
+}
+
+.resource-link:hover svg {
+  transform: translate(2px, -2px);
 }
 
 .resource-workflow {
@@ -847,6 +926,9 @@ button:disabled {
   min-width: 0;
   overflow: hidden;
   padding: 22px;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .input-panel {
@@ -1780,6 +1862,16 @@ button:disabled {
   display: flex;
   flex-direction: column;
   padding: 22px;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.price-card:hover {
+  border-color: #b9d9ca;
+  box-shadow: 0 18px 42px rgba(17, 24, 39, 0.08);
+  transform: translateY(-3px);
 }
 
 .price-card.highlight {
@@ -1813,6 +1905,133 @@ button:disabled {
 .dashboard-payment-success { border-left: 4px solid var(--mint-strong); color: #145c47; margin-bottom: 20px; }
 .spin { animation: spin 800ms linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes zesume-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes zesume-fade-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes zesume-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes zesume-line-draw {
+  from {
+    opacity: 0.25;
+    transform: scaleX(0.28);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav {
+    animation: zesume-fade-down 420ms ease-out both;
+  }
+
+  .hero-grid > div:first-child,
+  .resource-hero,
+  .auth-panel,
+  .app-header,
+  .dashboard-account-header {
+    animation: zesume-fade-up 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .product-preview {
+    animation: zesume-fade-up 680ms 110ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .product-preview .line {
+    animation: zesume-line-draw 560ms 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: left;
+  }
+
+  .product-preview .tag {
+    animation: zesume-fade-in 420ms 560ms ease-out both;
+  }
+
+  .status,
+  .error,
+  .template-analysis-summary,
+  .output-box,
+  .suggestions,
+  .quality-warnings {
+    animation: zesume-fade-up 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .workspace > .panel:first-child,
+  .dashboard-usage,
+  .pricing-grid {
+    animation: zesume-fade-up 560ms 90ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .workspace > .panel:nth-child(2),
+  .dashboard-grid {
+    animation: zesume-fade-up 620ms 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @supports (animation-timeline: view()) {
+    .section-title,
+    .section-copy,
+    .feature,
+    .home-resource-band > div,
+    .home-resource-band > .button,
+    .resource-section-heading,
+    .resource-card,
+    .resource-workflow > *,
+    .site-footer-inner > * {
+      animation: zesume-fade-up linear both;
+      animation-range: entry 2% cover 24%;
+      animation-timeline: view();
+    }
+
+    .feature:nth-child(2),
+    .resource-card:nth-child(2),
+    .resource-card:nth-child(4) {
+      animation-range: entry 7% cover 28%;
+    }
+
+    .feature:nth-child(3),
+    .resource-card:nth-child(3) {
+      animation-range: entry 11% cover 31%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 
 @media (max-width: 900px) {
   .hero-grid,
