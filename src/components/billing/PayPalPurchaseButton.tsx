@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { CreditCard, LoaderCircle } from "lucide-react";
 import type { PurchasablePlan } from "@/lib/paypal/config";
+import { trackEvent } from "@/lib/analytics/client";
+
+const planValues: Record<PurchasablePlan, number> = {
+  PLUS: 5,
+  PRO: 10,
+};
 
 type CheckoutResponse = {
   success?: boolean;
@@ -24,6 +30,20 @@ export function PayPalPurchaseButton({
   const [error, setError] = useState<string | null>(null);
 
   async function startCheckout() {
+    const value = planValues[plan];
+    trackEvent("begin_checkout", {
+      currency: "USD",
+      value,
+      plan,
+      items: [
+        {
+          item_id: plan.toLowerCase(),
+          item_name: `Zesume ${plan === "PLUS" ? "Plus" : "Pro"}`,
+          price: value,
+          quantity: 1,
+        },
+      ],
+    });
     setLoading(true);
     setError(null);
     try {
@@ -34,14 +54,28 @@ export function PayPalPurchaseButton({
       });
       const payload = await response.json().catch(() => ({})) as CheckoutResponse;
       if (response.status === 401 && payload.signInUrl) {
+        trackEvent("checkout_signin_required", { plan, value });
         window.location.assign(payload.signInUrl);
         return;
       }
       if (!response.ok || !payload.data?.approvalUrl) {
         throw new Error(payload.error?.message || "Checkout could not be started.");
       }
+      trackEvent("checkout_redirected", {
+        provider: "paypal",
+        plan,
+        value,
+        currency: "USD",
+      });
       window.location.assign(payload.data.approvalUrl);
     } catch (cause) {
+      trackEvent("checkout_failed", {
+        provider: "paypal",
+        plan,
+        value,
+        currency: "USD",
+        error_code: "CREATE_ORDER_FAILED",
+      });
       setError(cause instanceof Error ? cause.message : "Checkout could not be started.");
       setLoading(false);
     }
@@ -62,4 +96,3 @@ export function PayPalPurchaseButton({
     </div>
   );
 }
-

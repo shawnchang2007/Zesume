@@ -3,6 +3,7 @@
 import { Download, FileText, Loader2 } from "lucide-react";
 import type { CareerTarget, StructuredResume } from "@/lib/ai/types";
 import type { ResumeTemplateId } from "@/lib/resume/templates";
+import { trackEvent } from "@/lib/analytics/client";
 
 type DownloadButtonsProps = {
   resumeText: string;
@@ -50,6 +51,12 @@ export function DownloadButtons({
     if (disabled) return;
     onExportErrorChange(null);
     downloadBlob(new Blob([resumeText], { type: "text/plain;charset=utf-8" }), `${baseName}.txt`);
+    trackEvent("resume_download_succeeded", {
+      format: "txt",
+      target_track: targetTrack,
+      template_id: templateId,
+      matched_template: false,
+    });
   }
 
   async function downloadDocx() {
@@ -57,6 +64,13 @@ export function DownloadButtons({
 
     onExportingChange(true);
     onExportErrorChange(null);
+    const startedAt = performance.now();
+    trackEvent("resume_download_started", {
+      format: "docx",
+      target_track: targetTrack,
+      template_id: templateId,
+      matched_template: canMatchUploadedDocx,
+    });
 
     try {
       const isUploadedTemplate =
@@ -92,13 +106,37 @@ export function DownloadButtons({
         const result = (await response.json()) as {
           error?: { message?: string };
         };
+        trackEvent("resume_download_failed", {
+          format: "docx",
+          target_track: targetTrack,
+          template_id: templateId,
+          matched_template: canMatchUploadedDocx,
+          http_status: response.status,
+          error_code: "EXPORT_FAILED",
+          duration_ms: Math.round(performance.now() - startedAt),
+        });
         onExportErrorChange(result.error?.message || "Could not export DOCX.");
         return;
       }
 
       const blob = await response.blob();
       downloadBlob(blob, `${baseName}.docx`);
+      trackEvent("resume_download_succeeded", {
+        format: "docx",
+        target_track: targetTrack,
+        template_id: templateId,
+        matched_template: canMatchUploadedDocx,
+        duration_ms: Math.round(performance.now() - startedAt),
+      });
     } catch {
+      trackEvent("resume_download_failed", {
+        format: "docx",
+        target_track: targetTrack,
+        template_id: templateId,
+        matched_template: canMatchUploadedDocx,
+        error_code: "NETWORK_ERROR",
+        duration_ms: Math.round(performance.now() - startedAt),
+      });
       onExportErrorChange("Could not export DOCX. Please try again.");
     } finally {
       onExportingChange(false);

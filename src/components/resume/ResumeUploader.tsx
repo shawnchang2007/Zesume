@@ -10,6 +10,7 @@ import {
   UserRound,
 } from "lucide-react";
 import type { AccessPlan } from "@/lib/billing/plan-config";
+import { trackEvent } from "@/lib/analytics/client";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
@@ -63,15 +64,31 @@ export function ResumeUploader({
 
   async function uploadFile(file: File) {
     onExtractErrorChange(null);
+    const lowerName = file.name.toLowerCase();
+    const fileType = lowerName.endsWith(".docx")
+      ? "docx"
+      : lowerName.endsWith(".txt")
+        ? "txt"
+        : lowerName.endsWith(".pdf") || file.type === "application/pdf"
+          ? "pdf"
+          : "unsupported";
 
     if (file.size > MAX_FILE_SIZE) {
+      trackEvent("resume_import_failed", {
+        source: "file",
+        file_type: fileType,
+        error_code: "FILE_TOO_LARGE",
+      });
       onExtractErrorChange("File is too large. Please upload a file under 2MB.");
       return;
     }
 
-    const lowerName = file.name.toLowerCase();
-
     if (lowerName.endsWith(".pdf") || file.type === "application/pdf") {
+      trackEvent("resume_import_failed", {
+        source: "file",
+        file_type: fileType,
+        error_code: "UNSUPPORTED_FILE_TYPE",
+      });
       onExtractErrorChange(
         "PDF upload is not supported in v1.1. Please upload a .txt or .docx file.",
       );
@@ -79,10 +96,20 @@ export function ResumeUploader({
     }
 
     if (!lowerName.endsWith(".txt") && !lowerName.endsWith(".docx")) {
+      trackEvent("resume_import_failed", {
+        source: "file",
+        file_type: fileType,
+        error_code: "UNSUPPORTED_FILE_TYPE",
+      });
       onExtractErrorChange("Unsupported file type. Please upload a .txt or .docx file.");
       return;
     }
 
+    const startedAt = performance.now();
+    trackEvent("resume_import_started", {
+      source: "file",
+      file_type: fileType,
+    });
     onExtractingChange(true);
 
     try {
@@ -97,12 +124,30 @@ export function ResumeUploader({
       const result = (await response.json()) as ExtractResponse;
 
       if (!result.success) {
+        trackEvent("resume_import_failed", {
+          source: "file",
+          file_type: fileType,
+          error_code: result.error.code,
+          duration_ms: Math.round(performance.now() - startedAt),
+        });
         onExtractErrorChange(result.error.message);
         return;
       }
 
+      trackEvent("resume_import_succeeded", {
+        source: "file",
+        file_type: fileType,
+        character_count: result.data.characterCount,
+        duration_ms: Math.round(performance.now() - startedAt),
+      });
       onExtractedText(result.data.extractedText, result.data.fileName);
     } catch {
+      trackEvent("resume_import_failed", {
+        source: "file",
+        file_type: fileType,
+        error_code: "NETWORK_ERROR",
+        duration_ms: Math.round(performance.now() - startedAt),
+      });
       onExtractErrorChange("Could not extract text from this file. Please try again.");
     } finally {
       onExtractingChange(false);
@@ -112,6 +157,11 @@ export function ResumeUploader({
   async function importFromProfile() {
     if (!canImportFromProfile) return;
 
+    const startedAt = performance.now();
+    trackEvent("resume_import_started", {
+      source: "profile",
+      plan,
+    });
     onExtractErrorChange(null);
     onProfileImportingChange(true);
 
@@ -120,12 +170,30 @@ export function ResumeUploader({
       const result = (await response.json()) as ProfileImportResponse;
 
       if (!result.success) {
+        trackEvent("resume_import_failed", {
+          source: "profile",
+          plan,
+          error_code: result.error.code,
+          duration_ms: Math.round(performance.now() - startedAt),
+        });
         onExtractErrorChange(result.error.message);
         return;
       }
 
+      trackEvent("resume_import_succeeded", {
+        source: "profile",
+        plan,
+        character_count: result.data.characterCount,
+        duration_ms: Math.round(performance.now() - startedAt),
+      });
       onExtractedText(result.data.resumeText, "Career Profile");
     } catch {
+      trackEvent("resume_import_failed", {
+        source: "profile",
+        plan,
+        error_code: "NETWORK_ERROR",
+        duration_ms: Math.round(performance.now() - startedAt),
+      });
       onExtractErrorChange("Could not import your profile. Please try again.");
     } finally {
       onProfileImportingChange(false);
@@ -167,6 +235,10 @@ export function ResumeUploader({
         disabled={isImportingProfile}
         onClick={() => {
           if (!canImportFromProfile) {
+            trackEvent("paywall_viewed", {
+              feature: "profile_import",
+              plan,
+            });
             router.push("/pricing");
             return;
           }

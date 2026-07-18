@@ -17,9 +17,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const payment = await capturePayPalOrder(orderId, currentUser.id);
+    await capturePayPalOrder(orderId, currentUser.id);
     return NextResponse.redirect(
-      `${baseUrl}/dashboard?payment=success&plan=${payment.plan.toLowerCase()}`,
+      `${baseUrl}/dashboard?payment=success&transaction=${encodeURIComponent(orderId)}`,
     );
   } catch (error) {
     const code = error instanceof CheckoutError ? error.code : "CAPTURE_FAILED";
@@ -27,4 +27,3 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${baseUrl}/pricing?payment=failed`);
   }
 }
-

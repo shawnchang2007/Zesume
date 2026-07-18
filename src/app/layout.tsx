@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import "./globals.css";
-
-const googleAnalyticsId = "G-C3CZH2K6KZ";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://zesume.xyz"),
@@ -87,18 +85,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         {children}
-        <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`}
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', '${googleAnalyticsId}');
-          `}
-        </Script>
+        <GoogleAnalytics />
       </body>
     </html>
   );

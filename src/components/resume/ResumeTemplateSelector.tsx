@@ -12,6 +12,7 @@ import {
   LockKeyhole,
 } from "lucide-react";
 import type { AccessPlan } from "@/lib/billing/plan-config";
+import { trackEvent } from "@/lib/analytics/client";
 import {
   builtInResumeTemplates,
   type ResumeTemplateId,
@@ -74,14 +75,31 @@ export function ResumeTemplateSelector({
   const router = useRouter();
 
   async function analyzeTemplate(file: File) {
+    const lowerName = file.name.toLowerCase();
+    const fileType = lowerName.endsWith(".docx")
+      ? "docx"
+      : lowerName.endsWith(".txt")
+        ? "txt"
+        : lowerName.endsWith(".pdf")
+          ? "pdf"
+          : "unsupported";
+
     if (file.size > MAX_FILE_SIZE) {
+      trackEvent("template_analysis_failed", {
+        file_type: fileType,
+        error_code: "FILE_TOO_LARGE",
+        plan,
+      });
       onAnalysisError("Template is too large. Please upload a file under 2MB.");
       return;
     }
 
-    const lowerName = file.name.toLowerCase();
-
     if (!lowerName.endsWith(".txt") && !lowerName.endsWith(".docx")) {
+      trackEvent("template_analysis_failed", {
+        file_type: fileType,
+        error_code: "UNSUPPORTED_FILE_TYPE",
+        plan,
+      });
       onAnalysisError(
         lowerName.endsWith(".pdf")
           ? "PDF template analysis is not supported yet. Please upload a .txt or .docx file."
@@ -90,6 +108,11 @@ export function ResumeTemplateSelector({
       return;
     }
 
+    const startedAt = performance.now();
+    trackEvent("template_analysis_started", {
+      file_type: fileType,
+      plan,
+    });
     onAnalysisStart();
 
     try {
@@ -103,10 +126,23 @@ export function ResumeTemplateSelector({
       const result = (await response.json()) as AnalyzeTemplateResponse;
 
       if (!result.success) {
+        trackEvent("template_analysis_failed", {
+          file_type: fileType,
+          error_code: result.error.code,
+          duration_ms: Math.round(performance.now() - startedAt),
+          plan,
+        });
         onAnalysisError(result.error.message);
         return;
       }
 
+      trackEvent("template_analysis_succeeded", {
+        file_type: fileType,
+        provider: result.data.provider,
+        model: result.data.model,
+        duration_ms: Math.round(performance.now() - startedAt),
+        plan,
+      });
       onAnalysisSuccess(
         result.data.templateSpec,
         result.data.customTemplateId,
@@ -114,6 +150,12 @@ export function ResumeTemplateSelector({
         file,
       );
     } catch {
+      trackEvent("template_analysis_failed", {
+        file_type: fileType,
+        error_code: "NETWORK_ERROR",
+        duration_ms: Math.round(performance.now() - startedAt),
+        plan,
+      });
       onAnalysisError("Could not analyze this template. Please try again.");
     } finally {
       onAnalysisEnd();
@@ -160,6 +202,10 @@ export function ResumeTemplateSelector({
           disabled={isAnalyzing}
           onClick={() => {
             if (!canUploadTemplate) {
+              trackEvent("paywall_viewed", {
+                feature: "custom_template",
+                plan,
+              });
               router.push("/pricing");
               return;
             }

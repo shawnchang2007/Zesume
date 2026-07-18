@@ -1,5 +1,5 @@
-import { LogIn } from "lucide-react";
 import { signIn } from "@/auth";
+import { SignInSubmitButton } from "./SignInSubmitButton";
 
 type SignInButtonProps = {
   redirectTo?: string;
@@ -19,10 +19,11 @@ export function SignInButton({
         await signIn("google", { redirectTo });
       }}
     >
-      <button className={className} type="submit">
-        <LogIn size={16} aria-hidden="true" />
-        {label}
-      </button>
+      <SignInSubmitButton
+        className={className}
+        label={label}
+        redirectTo={redirectTo}
+      />
     </form>
   );
 }

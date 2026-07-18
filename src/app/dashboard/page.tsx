@@ -16,6 +16,7 @@ import { UserMenu } from "@/components/auth/UserMenu";
 import { BrandMark } from "@/components/BrandMark";
 import { BasicProfileForm } from "@/components/dashboard/BasicProfileForm";
 import { HistoryDownloadButtons } from "@/components/dashboard/HistoryDownloadButtons";
+import { AnalyticsEvent } from "@/components/analytics/AnalyticsEvent";
 import type { BasicProfileInput } from "@/lib/profile/basic-profile";
 
 function planLabel(plan: string) {
@@ -70,10 +71,32 @@ async function loadDashboardData(userId: string, historyLimit: number) {
   }
 }
 
+async function loadConfirmedPurchase(userId: string, orderId?: string) {
+  if (!orderId || !/^[A-Z0-9-]{5,64}$/i.test(orderId)) return null;
+
+  try {
+    return await prisma.subscription.findFirst({
+      where: {
+        userId,
+        providerSubscriptionId: orderId,
+        status: "ACTIVE",
+      },
+      select: {
+        plan: true,
+        amountCents: true,
+        currency: true,
+        providerSubscriptionId: true,
+      },
+    });
+  } catch {
+    return null;
+  }
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ payment?: string; plan?: string }>;
+  searchParams: Promise<{ payment?: string; transaction?: string }>;
 }) {
   const params = await searchParams;
   const currentUser = await getCurrentUser();
@@ -102,6 +125,10 @@ export default async function DashboardPage({
   const data = access.databaseBacked && access.userId
     ? await loadDashboardData(access.userId, access.limits.historyLimit)
     : { profile: null, history: [] };
+  const confirmedPurchase =
+    params.payment === "success" && access.userId
+      ? await loadConfirmedPurchase(access.userId, params.transaction)
+      : null;
   const careerOpen = canUseFeature(access, "CAREER_EXPERIENCE");
   const importOpen = canUseFeature(access, "PROFILE_IMPORT");
   const usagePercent = Math.min(
@@ -124,6 +151,26 @@ export default async function DashboardPage({
       </header>
 
       <section className="dashboard-main">
+        {confirmedPurchase?.providerSubscriptionId ? (
+          <AnalyticsEvent
+            name="purchase"
+            parameters={{
+              transaction_id: confirmedPurchase.providerSubscriptionId,
+              currency: confirmedPurchase.currency ?? "USD",
+              value: (confirmedPurchase.amountCents ?? 0) / 100,
+              plan: confirmedPurchase.plan,
+              items: [
+                {
+                  item_id: confirmedPurchase.plan.toLowerCase(),
+                  item_name: `Zesume ${planLabel(confirmedPurchase.plan)}`,
+                  price: (confirmedPurchase.amountCents ?? 0) / 100,
+                  quantity: 1,
+                },
+              ],
+            }}
+            sessionStorageKey={`zesume-purchase-${confirmedPurchase.providerSubscriptionId}`}
+          />
+        ) : null}
         <div className="dashboard-account-header">
           <div>
             <p className="eyebrow">Account workspace</p>
@@ -133,9 +180,9 @@ export default async function DashboardPage({
           <div className="dashboard-plan-badge">{planLabel(access.plan)}</div>
         </div>
 
-        {params.payment === "success" ? (
+        {confirmedPurchase ? (
           <div className="dashboard-notice dashboard-payment-success">
-            Payment confirmed. Your {params.plan === "pro" ? "Pro" : "Plus"} access is ready for the next 30 days.
+            Payment confirmed. Your {planLabel(confirmedPurchase.plan)} access is ready for the next 30 days.
           </div>
         ) : null}
 

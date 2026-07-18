@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -24,6 +24,7 @@ import type {
   ResumeTemplateSpec,
 } from "@/lib/resume/templates";
 import type { AccessPlan } from "@/lib/billing/plan-config";
+import { trackEvent } from "@/lib/analytics/client";
 
 const MIN_RESUME_LENGTH = 200;
 const MAX_RESUME_LENGTH = 5000;
@@ -100,6 +101,7 @@ export function ResumeWorkspace({
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [saveGeneration, setSaveGeneration] = useState(false);
+  const hasTrackedManualInput = useRef(false);
 
   const characterMessage = useMemo(() => {
     if (!resumeText.length) return "Paste or upload 200-5,000 characters";
@@ -122,12 +124,21 @@ export function ResumeWorkspace({
     (templateId !== "uploaded-template" ||
       Boolean(uploadedTemplateSpec && customTemplateId));
 
-  async function generateResume() {
+  async function generateResume(trigger: "generate" | "regenerate" = "generate") {
     if (!canGenerate) {
       setError("Paste or upload a resume between 200 and 5,000 characters first.");
       return;
     }
 
+    const startedAt = performance.now();
+    trackEvent("resume_generation_started", {
+      trigger,
+      plan,
+      target_track: targetTrack,
+      template_id: templateId,
+      tone,
+      save_generation: saveGeneration,
+    });
     setIsLoading(true);
     setError(null);
     setCopied(false);
@@ -154,10 +165,33 @@ export function ResumeWorkspace({
       const result = (await response.json()) as RewriteResponse;
 
       if (!result.success) {
+        trackEvent("resume_generation_failed", {
+          trigger,
+          plan,
+          target_track: targetTrack,
+          template_id: templateId,
+          tone,
+          error_code: result.error.code,
+          http_status: response.status,
+          duration_ms: Math.round(performance.now() - startedAt),
+        });
         setError(result.error.message);
         return;
       }
 
+      trackEvent("resume_generation_succeeded", {
+        trigger,
+        plan,
+        target_track: targetTrack,
+        template_id: templateId,
+        tone,
+        provider: result.data.provider,
+        model: result.data.model,
+        save_generation: saveGeneration,
+        suggestion_count: result.data.suggestions.length,
+        warning_count: result.data.qualityWarnings.length,
+        duration_ms: Math.round(performance.now() - startedAt),
+      });
       setRewrittenResume(result.data.rewrittenResume);
       setStructuredResume(result.data.structuredResume);
       setGeneratedTemplateId(templateId);
@@ -169,6 +203,15 @@ export function ResumeWorkspace({
       setQualityWarnings(result.data.qualityWarnings);
       setProviderMeta(`${result.data.provider} / ${result.data.model}`);
     } catch {
+      trackEvent("resume_generation_failed", {
+        trigger,
+        plan,
+        target_track: targetTrack,
+        template_id: templateId,
+        tone,
+        error_code: "NETWORK_ERROR",
+        duration_ms: Math.round(performance.now() - startedAt),
+      });
       setError("Could not rewrite the resume. Please try again.");
     } finally {
       setIsLoading(false);
@@ -179,6 +222,11 @@ export function ResumeWorkspace({
     if (!rewrittenResume) return;
 
     await navigator.clipboard.writeText(rewrittenResume);
+    trackEvent("resume_result_copied", {
+      plan,
+      target_track: generatedTargetTrack,
+      template_id: generatedTemplateId,
+    });
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   }
@@ -221,7 +269,7 @@ export function ResumeWorkspace({
             <button
               className="button button-primary"
               disabled={!canGenerate}
-              onClick={() => void generateResume()}
+              onClick={() => void generateResume("generate")}
               type="button"
             >
               {isLoading ? (
@@ -259,6 +307,13 @@ export function ResumeWorkspace({
               characterMessage={characterMessage}
               maxLength={MAX_RESUME_LENGTH}
               onChange={(value) => {
+                if (!hasTrackedManualInput.current && value.trim()) {
+                  hasTrackedManualInput.current = true;
+                  trackEvent("resume_input_started", {
+                    source: "manual",
+                    plan,
+                  });
+                }
                 setResumeText(value);
                 setError(null);
                 setQualityWarnings([]);
@@ -267,7 +322,13 @@ export function ResumeWorkspace({
             />
 
             <CareerTargetSelector
-              onChange={setTargetTrack}
+              onChange={(nextTargetTrack) => {
+                setTargetTrack(nextTargetTrack);
+                trackEvent("career_target_selected", {
+                  target_track: nextTargetTrack,
+                  plan,
+                });
+              }}
               value={targetTrack}
             />
 
@@ -295,6 +356,10 @@ export function ResumeWorkspace({
               }}
               onChange={(nextTemplateId) => {
                 setTemplateId(nextTemplateId);
+                trackEvent("resume_template_selected", {
+                  template_id: nextTemplateId,
+                  plan,
+                });
                 setError(null);
                 setQualityWarnings([]);
               }}
@@ -305,13 +370,28 @@ export function ResumeWorkspace({
               value={templateId}
             />
 
-            <ToneSelector onChange={setTone} value={tone} />
+            <ToneSelector
+              onChange={(nextTone) => {
+                setTone(nextTone);
+                trackEvent("resume_tone_selected", {
+                  tone: nextTone,
+                  plan,
+                });
+              }}
+              value={tone}
+            />
 
             {plan !== "GUEST" ? (
               <label className="save-history-option">
                 <input
                   checked={saveGeneration}
-                  onChange={(event) => setSaveGeneration(event.target.checked)}
+                  onChange={(event) => {
+                    setSaveGeneration(event.target.checked);
+                    trackEvent("save_history_toggled", {
+                      enabled: event.target.checked,
+                      plan,
+                    });
+                  }}
                   type="checkbox"
                 />
                 <span>
@@ -327,7 +407,7 @@ export function ResumeWorkspace({
               <button
                 className="button button-primary button-full"
                 disabled={!canGenerate}
-                onClick={() => void generateResume()}
+                onClick={() => void generateResume("generate")}
                 type="button"
               >
                 {isLoading ? (
@@ -348,7 +428,7 @@ export function ResumeWorkspace({
             onCopy={() => void copyResult()}
             onExportErrorChange={setExportError}
             onExportingChange={setIsExporting}
-            onRegenerate={() => void generateResume()}
+            onRegenerate={() => void generateResume("regenerate")}
             providerMeta={providerMeta}
             rewrittenResume={rewrittenResume}
             structuredResume={structuredResume}

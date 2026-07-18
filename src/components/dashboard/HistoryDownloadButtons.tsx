@@ -1,4 +1,7 @@
+"use client";
+
 import { Download, FileText } from "lucide-react";
+import { trackEvent } from "@/lib/analytics/client";
 
 type HistoryDownloadButtonsProps = {
   generationId: string;
@@ -20,6 +23,9 @@ export function HistoryDownloadButtons({
       <a
         className="history-download-button"
         href={`${downloadPath}?format=txt`}
+        onClick={() =>
+          trackEvent("history_download_started", { format: "txt" })
+        }
         title="Download TXT"
       >
         <FileText size={14} aria-hidden="true" />
@@ -28,6 +34,9 @@ export function HistoryDownloadButtons({
       <a
         className="history-download-button"
         href={`${downloadPath}?format=docx`}
+        onClick={() =>
+          trackEvent("history_download_started", { format: "docx" })
+        }
         title="Download DOCX"
       >
         <Download size={14} aria-hidden="true" />

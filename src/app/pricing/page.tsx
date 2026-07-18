@@ -4,6 +4,7 @@ import { ArrowRight, CheckCircle2, XCircle } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { Nav } from "@/components/Nav";
 import { PayPalPurchaseButton } from "@/components/billing/PayPalPurchaseButton";
+import { AnalyticsEvent } from "@/components/analytics/AnalyticsEvent";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getCurrentAccess } from "@/lib/billing";
 
@@ -63,10 +64,29 @@ export default async function PricingPage({
 }) {
   const [params, currentUser] = await Promise.all([searchParams, getCurrentUser()]);
   const access = await getCurrentAccess(currentUser, { includeUsage: false });
+  const checkoutResult = ["cancelled", "failed", "invalid", "signin"].includes(
+    params.payment ?? "",
+  )
+    ? params.payment
+    : undefined;
 
   return (
     <main className="shell">
       <Nav />
+      <AnalyticsEvent
+        name="pricing_viewed"
+        parameters={{
+          authenticated: Boolean(currentUser),
+          current_plan: access.plan,
+        }}
+      />
+      {checkoutResult ? (
+        <AnalyticsEvent
+          name="checkout_result"
+          parameters={{ result: checkoutResult }}
+          sessionStorageKey={`zesume-checkout-result-${checkoutResult}`}
+        />
+      ) : null}
       <section className="section">
         <div className="eyebrow">Pricing</div>
         <h1 className="section-title">Start focused. Upgrade when you need depth.</h1>
