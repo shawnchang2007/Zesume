@@ -35,6 +35,12 @@ const targetTracks = new Set<CareerTarget>([
 
 const tones = new Set<Tone>(["professional", "concise", "technical"]);
 
+function getRequestId(request: Request) {
+  const supplied = request.headers.get("X-Request-ID")?.trim();
+  if (supplied && /^[a-zA-Z0-9._:-]{1,80}$/.test(supplied)) return supplied;
+  return crypto.randomUUID();
+}
+
 function errorResponse(
   code: string,
   message: string,
@@ -54,6 +60,9 @@ function errorResponse(
 }
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+  const startedAt = Date.now();
+
   try {
     const body = await readJsonRequest<{
       resumeText?: unknown;
@@ -280,25 +289,39 @@ export async function POST(request: Request) {
       remainingGenerations = Math.max(0, access.usage.remaining - 1);
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...data,
-        targetTrack,
-        templateId: templateIdValue,
-        authenticated: Boolean(currentUser),
-        generationId,
-        remainingGenerations,
-        structuredResume: {
-          ...data.structuredResume,
-          qualityNotes: {
-            ...data.structuredResume.qualityNotes,
-            warnings: qualityWarnings,
+    console.info(
+      JSON.stringify({
+        event: "resume_rewrite_succeeded",
+        requestId,
+        provider: data.provider,
+        model: data.model,
+        attempts: data.attempts ?? 1,
+        durationMs: Date.now() - startedAt,
+      }),
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          ...data,
+          targetTrack,
+          templateId: templateIdValue,
+          authenticated: Boolean(currentUser),
+          generationId,
+          remainingGenerations,
+          structuredResume: {
+            ...data.structuredResume,
+            qualityNotes: {
+              ...data.structuredResume.qualityNotes,
+              warnings: qualityWarnings,
+            },
           },
+          qualityWarnings,
         },
-        qualityWarnings,
       },
-    });
+      { headers: { "X-Request-ID": requestId } },
+    );
   } catch (error) {
     if (error instanceof BodyTooLargeError) {
       return errorResponse(
@@ -314,23 +337,77 @@ export async function POST(request: Request) {
     console.error(
       JSON.stringify({
         event: "resume_rewrite_failed",
+        requestId,
         code: errorCode,
+        durationMs: Date.now() - startedAt,
       }),
     );
 
+    const requestHeaders = { "X-Request-ID": requestId };
+
     if (message.startsWith("AI_CONFIG_ERROR")) {
-      return errorResponse("AI_CONFIG_ERROR", "The AI provider is not configured.", 500);
+      return errorResponse("AI_CONFIG_ERROR", "The AI provider is not configured.", 500, requestHeaders);
+    }
+
+    if (message.startsWith("AI_AUTH_ERROR")) {
+      return errorResponse("AI_CONFIG_ERROR", "The AI provider credentials were rejected.", 500, requestHeaders);
     }
 
     if (message.startsWith("AI_REQUEST_FAILED")) {
-      return errorResponse("AI_REQUEST_FAILED", "The AI request failed. Please try again.", 502);
+      return errorResponse("AI_REQUEST_FAILED", "The AI request failed. No generation was charged. Please try again.", 502, requestHeaders);
     }
 
     if (message.startsWith("AI_TIMEOUT")) {
       return errorResponse(
         "AI_TIMEOUT",
-        "The AI provider took too long to respond. Please try again.",
+        "DeepSeek did not finish in time. No generation was charged. Please try again.",
         504,
+        requestHeaders,
+      );
+    }
+
+    if (message.startsWith("AI_RATE_LIMITED")) {
+      return errorResponse(
+        "AI_RATE_LIMITED",
+        "DeepSeek is busy. Zesume retried automatically; please try again shortly.",
+        503,
+        { ...requestHeaders, "Retry-After": "5" },
+      );
+    }
+
+    if (message.startsWith("AI_PROVIDER_UNAVAILABLE")) {
+      return errorResponse(
+        "AI_PROVIDER_UNAVAILABLE",
+        "The AI provider is temporarily unavailable. No generation was charged.",
+        503,
+        { ...requestHeaders, "Retry-After": "5" },
+      );
+    }
+
+    if (message.startsWith("AI_OUTPUT_TRUNCATED")) {
+      return errorResponse(
+        "AI_OUTPUT_TRUNCATED",
+        "The AI response ended before the resume was complete. No generation was charged; please retry.",
+        502,
+        requestHeaders,
+      );
+    }
+
+    if (message.startsWith("AI_INVALID_RESPONSE")) {
+      return errorResponse(
+        "AI_INVALID_RESPONSE",
+        "The AI returned an incomplete result. No generation was charged; please retry.",
+        502,
+        requestHeaders,
+      );
+    }
+
+    if (message.startsWith("AI_CONTENT_FILTERED")) {
+      return errorResponse(
+        "AI_CONTENT_FILTERED",
+        "The AI provider could not process this resume content. No generation was charged.",
+        422,
+        requestHeaders,
       );
     }
 
@@ -339,9 +416,10 @@ export async function POST(request: Request) {
         "AI_PAYMENT_REQUIRED",
         "DeepSeek account has insufficient balance. Please add credits and try again.",
         402,
+        requestHeaders,
       );
     }
 
-    return errorResponse("INTERNAL_SERVER_ERROR", "Something went wrong.", 500);
+    return errorResponse("INTERNAL_SERVER_ERROR", "Something went wrong.", 500, requestHeaders);
   }
 }

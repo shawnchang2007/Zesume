@@ -103,6 +103,7 @@ export type RewriteResumeOutput = {
   qualityWarnings: string[];
   provider: string;
   model: string;
+  attempts?: number;
 };
 
 export type AnalyzeResumeTemplateInput = {
@@ -114,6 +115,7 @@ export type AnalyzeResumeTemplateOutput = {
   templateSpec: ResumeTemplateSpec;
   provider: "deepseek";
   model: string;
+  attempts?: number;
 };
 
 export type AnalyzeCareerImportInput = {
@@ -126,4 +128,5 @@ export type AnalyzeCareerImportOutput = {
   warnings: string[];
   provider: string;
   model: string;
+  attempts?: number;
 };

@@ -1371,6 +1371,22 @@ button:disabled {
   margin-top: 14px;
 }
 
+.generation-status {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 12px;
+  gap: 7px;
+  line-height: 1.4;
+  margin-top: 9px;
+  min-height: 18px;
+}
+
+.generation-status svg {
+  color: var(--blue);
+  flex: 0 0 auto;
+}
+
 .suggestions {
   background: #fbfcfd;
   border: 1px solid var(--line);

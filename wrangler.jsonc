@@ -26,7 +26,8 @@
     "AI_PROVIDER": "deepseek",
     "DEEPSEEK_MODEL": "deepseek-v4-flash",
     "DEEPSEEK_THINKING": "disabled",
-    "AI_REQUEST_TIMEOUT_MS": "45000",
+    "AI_REQUEST_TIMEOUT_MS": "65000",
+    "AI_MAX_ATTEMPTS": "2",
     "DATABASE_RUNTIME_ENABLED": "true",
     "AUTH_DATABASE_ENABLED": "true",
     "PAYPAL_ENVIRONMENT": "live"

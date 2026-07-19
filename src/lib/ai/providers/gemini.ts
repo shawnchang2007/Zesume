@@ -1,5 +1,5 @@
 import { buildRewritePrompt } from "../prompts";
-import { fetchWithAiTimeout } from "../fetch-with-timeout";
+import { fetchWithAiRetry } from "../fetch-with-timeout";
 import { parseRewriteModelOutput } from "../parse-output";
 import type { RewriteResumeInput, RewriteResumeOutput } from "../types";
 
@@ -22,9 +22,10 @@ export async function rewriteWithGemini(
   }
 
   let response: Response;
+  let attempts = 1;
 
   try {
-    response = await fetchWithAiTimeout(
+    const result = await fetchWithAiRetry(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
         method: "POST",
@@ -45,15 +46,23 @@ export async function rewriteWithGemini(
         }),
       },
     );
+    response = result.response;
+    attempts = result.attempts;
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith("AI_TIMEOUT")) {
+    if (error instanceof Error && error.message.startsWith("AI_")) {
       throw error;
     }
 
-    throw new Error("AI_REQUEST_FAILED: Gemini request failed.");
+    throw new Error("AI_PROVIDER_UNAVAILABLE: Gemini request failed.");
   }
 
   if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error("AI_RATE_LIMITED: Gemini is temporarily busy.");
+    }
+    if (response.status >= 500) {
+      throw new Error("AI_PROVIDER_UNAVAILABLE: Gemini is temporarily unavailable.");
+    }
     throw new Error("AI_REQUEST_FAILED: Gemini request failed.");
   }
 
@@ -65,8 +74,8 @@ export async function rewriteWithGemini(
   }
 
   try {
-    return parseRewriteModelOutput(text, "gemini", model);
+    return { ...parseRewriteModelOutput(text, "gemini", model), attempts };
   } catch {
-    throw new Error("AI_REQUEST_FAILED: Gemini returned invalid JSON.");
+    throw new Error("AI_INVALID_RESPONSE: Gemini returned invalid JSON.");
   }
 }

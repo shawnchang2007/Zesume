@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -39,6 +39,7 @@ type RewriteResponse =
         qualityWarnings: string[];
         provider: string;
         model: string;
+        attempts?: number;
         authenticated: boolean;
       };
     }
@@ -80,6 +81,7 @@ export function ResumeWorkspace({
     useState<string | null>(null);
   const [tone, setTone] = useState<Tone>("professional");
   const [isLoading, setIsLoading] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState("");
   const [rewrittenResume, setRewrittenResume] = useState("");
   const [structuredResume, setStructuredResume] =
     useState<StructuredResume | null>(null);
@@ -102,6 +104,34 @@ export function ResumeWorkspace({
   const [exportError, setExportError] = useState<string | null>(null);
   const [saveGeneration, setSaveGeneration] = useState(false);
   const hasTrackedManualInput = useRef(false);
+  const generationInFlight = useRef(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setGenerationStatus("");
+      return;
+    }
+
+    setGenerationStatus("Analyzing your resume");
+    const rewritingTimer = window.setTimeout(
+      () => setGenerationStatus("Rewriting and checking facts"),
+      8_000,
+    );
+    const structuringTimer = window.setTimeout(
+      () => setGenerationStatus("Structuring the final resume"),
+      25_000,
+    );
+    const slowTimer = window.setTimeout(
+      () => setGenerationStatus("DeepSeek is taking longer than usual"),
+      45_000,
+    );
+
+    return () => {
+      window.clearTimeout(rewritingTimer);
+      window.clearTimeout(structuringTimer);
+      window.clearTimeout(slowTimer);
+    };
+  }, [isLoading]);
 
   const characterMessage = useMemo(() => {
     if (!resumeText.length) return "Paste or upload 200-5,000 characters";
@@ -125,12 +155,16 @@ export function ResumeWorkspace({
       Boolean(uploadedTemplateSpec && customTemplateId));
 
   async function generateResume(trigger: "generate" | "regenerate" = "generate") {
+    if (generationInFlight.current) return;
+
     if (!canGenerate) {
       setError("Paste or upload a resume between 200 and 5,000 characters first.");
       return;
     }
 
+    generationInFlight.current = true;
     const startedAt = performance.now();
+    const requestId = crypto.randomUUID();
     trackEvent("resume_generation_started", {
       trigger,
       plan,
@@ -150,6 +184,7 @@ export function ResumeWorkspace({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Request-ID": requestId,
         },
         body: JSON.stringify({
           resumeText,
@@ -190,6 +225,7 @@ export function ResumeWorkspace({
         save_generation: saveGeneration,
         suggestion_count: result.data.suggestions.length,
         warning_count: result.data.qualityWarnings.length,
+        attempt_count: result.data.attempts ?? 1,
         duration_ms: Math.round(performance.now() - startedAt),
       });
       setRewrittenResume(result.data.rewrittenResume);
@@ -201,7 +237,11 @@ export function ResumeWorkspace({
       );
       setSuggestions(result.data.suggestions);
       setQualityWarnings(result.data.qualityWarnings);
-      setProviderMeta(`${result.data.provider} / ${result.data.model}`);
+      setProviderMeta(
+        `${result.data.provider} / ${result.data.model}${
+          (result.data.attempts ?? 1) > 1 ? " / recovered after retry" : ""
+        }`,
+      );
     } catch {
       trackEvent("resume_generation_failed", {
         trigger,
@@ -214,6 +254,7 @@ export function ResumeWorkspace({
       });
       setError("Could not rewrite the resume. Please try again.");
     } finally {
+      generationInFlight.current = false;
       setIsLoading(false);
     }
   }
@@ -277,7 +318,7 @@ export function ResumeWorkspace({
               ) : (
                 <Sparkles size={16} aria-hidden="true" />
               )}
-              {isLoading ? "Rewriting" : "Generate"}
+              {isLoading ? "Working" : "Generate"}
             </button>
           </div>
         </div>
@@ -415,9 +456,15 @@ export function ResumeWorkspace({
                 ) : (
                   <Sparkles size={16} aria-hidden="true" />
                 )}
-                {isLoading ? "Rewriting" : "Generate tailored resume"}
+                {isLoading ? "Generating" : "Generate tailored resume"}
               </button>
             </div>
+            {isLoading ? (
+              <div className="generation-status" role="status" aria-live="polite">
+                <Loader2 className="spin" size={14} aria-hidden="true" />
+                <span>{generationStatus}. Please keep this tab open.</span>
+              </div>
+            ) : null}
           </section>
 
           <GeneratedOutput
