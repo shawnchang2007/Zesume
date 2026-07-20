@@ -127,6 +127,20 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+model EmailLoginCode {
+  id             String    @id @default(cuid())
+  identifierHash String
+  codeHash       String
+  expiresAt      DateTime
+  attempts       Int       @default(0)
+  consumedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([identifierHash, createdAt])
+  @@index([expiresAt])
+  @@map("email_login_codes")
+}
+
 model UserProfile {
   id     String @id @default(cuid())
   userId String @unique

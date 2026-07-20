@@ -7,12 +7,24 @@ if (!baseUrl || !baseUrl.startsWith("https://")) {
 const providers = await fetch(`${baseUrl}/api/auth/providers`);
 const providerData = await providers.json();
 
-if (!providers.ok || !providerData.google) {
-  throw new Error("Google Auth provider smoke test failed.");
+if (!providers.ok || !providerData.google || !providerData["email-code"]) {
+  throw new Error("Auth provider smoke test failed.");
 }
 
 const session = await fetch(`${baseUrl}/api/auth/session`);
 if (!session.ok) throw new Error("Auth session smoke test failed.");
+
+const invalidEmailCodeRequest = await fetch(
+  `${baseUrl}/api/auth/email-code/request`,
+  {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email: "not-an-email" }),
+  },
+);
+if (invalidEmailCodeRequest.status !== 400) {
+  throw new Error("Email code request validation smoke test failed.");
+}
 
 const templateAnalysis = await fetch(
   `${baseUrl}/api/resume/template/analyze`,

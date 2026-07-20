@@ -67,7 +67,13 @@ Copy `.env.example` to `.env.local` and configure the AI provider you want to us
 
 Google OAuth uses `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, and
 `AUTH_URL`. The local callback is `/api/auth/callback/google`; production uses
-`https://zesume.xyz/api/auth/callback/google`. Keep both secrets out of Git.
+`https://zesume.xyz/api/auth/callback/google`.
+
+One-time email code login uses Resend with `RESEND_API_KEY` and
+`AUTH_EMAIL_FROM`. Codes expire after 10 minutes, can be attempted five times,
+and are stored only as keyed hashes. `AUTH_EMAIL_CODE_SECRET` is optional; when
+it is not set, the existing `AUTH_SECRET` is used. Keep API keys and secrets out
+of Git and configure them as Cloudflare Worker secrets in production.
 
 ## Cloudflare Workers
 
@@ -115,11 +121,13 @@ Phase 1 adds the database and service foundation for future user memory:
 
 The current pasted or uploaded resume remains the primary source. Memory is only supporting context and should not be used to invent facts.
 
-Google login is available, but anonymous rewriting remains supported. When
+Google and one-time email code login are available, but anonymous rewriting
+remains supported. When
 `useMemory` is true but there is no authenticated user, the rewrite API falls
 back to the existing no-memory flow.
-Production uses Auth.js database sessions, Prisma Postgres, and
-`@prisma/adapter-pg` through OpenNext's official Prisma packaging flow.
+Production uses Auth.js JWT sessions with users and product data persisted in
+Prisma Postgres. JWT sessions are required by the email-code Credentials
+provider. OpenNext packages Prisma for the Workers runtime.
 
 ## v2 Access Foundation
 

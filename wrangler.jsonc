@@ -23,6 +23,7 @@
   "vars": {
     "AUTH_URL": "https://zesume.xyz",
     "AUTH_GOOGLE_ID": "870373804988-l930cjtoag0khuu4u1s3kjg75ffpr1qo.apps.googleusercontent.com",
+    "AUTH_EMAIL_FROM": "Zesume <login@zesume.xyz>",
     "AI_PROVIDER": "deepseek",
     "DEEPSEEK_MODEL": "deepseek-v4-flash",
     "DEEPSEEK_THINKING": "disabled",
@@ -38,6 +39,14 @@
       "namespace_id": "2026071001",
       "simple": {
         "limit": 10,
+        "period": 60
+      }
+    },
+    {
+      "name": "AUTH_EMAIL_RATE_LIMITER",
+      "namespace_id": "2026072001",
+      "simple": {
+        "limit": 8,
         "period": 60
       }
     }
