@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { LayoutDashboard, UserRound } from "lucide-react";
+import { LayoutDashboard, LogIn, UserRound } from "lucide-react";
 import { auth } from "@/auth";
-import { SignInButton } from "./SignInButton";
 import { SignOutButton } from "./SignOutButton";
 import type { CurrentUser } from "@/lib/auth/current-user";
 
 type UserMenuProps = {
   redirectToAfterSignOut?: string;
+  signInRedirectTo?: string;
   user?: CurrentUser | null;
 };
 
@@ -16,12 +16,20 @@ function userLabel(name?: string | null, email?: string | null) {
 
 export async function UserMenu({
   redirectToAfterSignOut = "/",
+  signInRedirectTo = "/app",
   user: providedUser,
 }: UserMenuProps) {
   const user = providedUser === undefined ? (await auth())?.user : providedUser;
 
   if (!user?.email) {
-    return <SignInButton />;
+    const signInUrl = `/sign-in?callbackUrl=${encodeURIComponent(signInRedirectTo)}`;
+
+    return (
+      <Link className="button button-secondary" href={signInUrl}>
+        <LogIn size={16} aria-hidden="true" />
+        Sign in
+      </Link>
+    );
   }
 
   return (

@@ -11,7 +11,6 @@ import {
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { canUseFeature, getCurrentAccess } from "@/lib/billing";
 import { prisma } from "@/lib/db/prisma";
-import { SignInButton } from "@/components/auth/SignInButton";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { BrandMark } from "@/components/BrandMark";
 import { BasicProfileForm } from "@/components/dashboard/BasicProfileForm";
@@ -116,7 +115,12 @@ export default async function DashboardPage({
           <p className="eyebrow">Your Zesume workspace</p>
           <h1>Sign in to open your dashboard.</h1>
           <p>Manage your profile, usage, resume history, templates, and future Career Memory from one place.</p>
-          <SignInButton redirectTo="/dashboard" label="Continue with Google" />
+          <Link
+            className="button button-primary"
+            href="/sign-in?callbackUrl=%2Fdashboard"
+          >
+            Continue to sign in
+          </Link>
         </section>
       </main>
     );
