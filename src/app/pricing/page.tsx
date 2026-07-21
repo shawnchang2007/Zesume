@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, Minus, XCircle } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { Nav } from "@/components/Nav";
 import { PayPalPurchaseButton } from "@/components/billing/PayPalPurchaseButton";
 import { AnalyticsEvent } from "@/components/analytics/AnalyticsEvent";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getCurrentAccess } from "@/lib/billing";
+import { PLAN_LIMITS } from "@/lib/billing/plan-config";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -56,6 +57,104 @@ const plans = [
     ],
   },
 ];
+
+type ComparisonValue = string | boolean;
+
+const comparisonRows: Array<{
+  feature: string;
+  detail?: string;
+  free: ComparisonValue;
+  plus: ComparisonValue;
+  pro: ComparisonValue;
+}> = [
+  {
+    feature: "AI resume generations",
+    detail: "Per active access period",
+    free: `${PLAN_LIMITS.FREE.generationLimit}`,
+    plus: `${PLAN_LIMITS.PLUS.generationLimit}`,
+    pro: `${PLAN_LIMITS.PRO.generationLimit}`,
+  },
+  {
+    feature: "Access period",
+    free: "Ongoing",
+    plus: "30 days",
+    pro: "30 days",
+  },
+  {
+    feature: "Built-in career and resume templates",
+    free: true,
+    plus: true,
+    pro: true,
+  },
+  {
+    feature: "TXT and DOCX export",
+    free: true,
+    plus: true,
+    pro: true,
+  },
+  {
+    feature: "Upload and analyze your own template",
+    detail: "AI analyzes its structure before rewriting",
+    free: false,
+    plus: true,
+    pro: true,
+  },
+  {
+    feature: "Basic Profile memory",
+    free: true,
+    plus: true,
+    pro: true,
+  },
+  {
+    feature: "Career Experience memory",
+    detail: "Education, work, projects, awards, skills and more",
+    free: false,
+    plus: false,
+    pro: true,
+  },
+  {
+    feature: "Import resume into Career Memory",
+    detail: "AI draft with review before saving",
+    free: false,
+    plus: false,
+    pro: true,
+  },
+  {
+    feature: "Import from saved profile",
+    detail: "Build a resume source from Profile and Career Memory",
+    free: false,
+    plus: false,
+    pro: true,
+  },
+  {
+    feature: "Saved resume history",
+    free: `${PLAN_LIMITS.FREE.historyLimit} entries`,
+    plus: `${PLAN_LIMITS.PLUS.historyLimit} entries`,
+    pro: `${PLAN_LIMITS.PRO.historyLimit} entries`,
+  },
+  {
+    feature: "Download saved history as TXT or DOCX",
+    free: true,
+    plus: true,
+    pro: true,
+  },
+];
+
+function ComparisonCell({ value }: { value: ComparisonValue }) {
+  if (typeof value === "string") {
+    return <strong className="comparison-value">{value}</strong>;
+  }
+
+  return value ? (
+    <span aria-label="Included" className="comparison-included" role="img">
+      <Check size={18} aria-hidden="true" />
+    </span>
+  ) : (
+    <span aria-label="Not included" className="comparison-unavailable" role="img">
+      <Minus size={18} aria-hidden="true" />
+    </span>
+  );
+}
 
 export default async function PricingPage({
   searchParams,
@@ -137,6 +236,49 @@ export default async function PricingPage({
             </article>
           ))}
         </div>
+        <section className="pricing-comparison" aria-labelledby="plan-comparison-title">
+          <div className="pricing-comparison-heading">
+            <div>
+              <p className="eyebrow">Plan comparison</p>
+              <h2 id="plan-comparison-title">Compare every limit and feature.</h2>
+            </div>
+            <p>
+              Free covers the core workflow, Plus unlocks uploaded templates,
+              and Pro adds the complete Career Memory workflow.
+            </p>
+          </div>
+          <div className="pricing-table-scroll" tabIndex={0}>
+            <table className="pricing-table">
+              <thead>
+                <tr>
+                  <th scope="col">Feature</th>
+                  <th scope="col">Free</th>
+                  <th className="paid-column" scope="col">
+                    <span>Plus</span>
+                    <small>POPULAR</small>
+                  </th>
+                  <th className="paid-column" scope="col">Pro</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparisonRows.map((row) => (
+                  <tr key={row.feature}>
+                    <th scope="row">
+                      <strong>{row.feature}</strong>
+                      {row.detail ? <small>{row.detail}</small> : null}
+                    </th>
+                    <td><ComparisonCell value={row.free} /></td>
+                    <td className="paid-column"><ComparisonCell value={row.plus} /></td>
+                    <td className="paid-column"><ComparisonCell value={row.pro} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="pricing-comparison-note">
+            Plus and Pro are one-time purchases for 30 days and do not renew automatically.
+          </p>
+        </section>
         <p style={{ marginTop: 24 }}>
           <Link className="button button-primary" href={currentUser ? "/dashboard" : "/sign-in?callbackUrl=%2Fpricing"}>
             {currentUser ? "View account usage" : "Sign in before checkout"}
